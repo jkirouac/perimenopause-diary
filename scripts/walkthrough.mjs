@@ -1,11 +1,12 @@
 // Walks through the app like a person would on a phone, checks the key rules,
 // and saves screenshots. Uses a throwaway account that is deleted at the end.
 // Run with the dev server up: node --env-file=.env.local scripts/walkthrough.mjs <screenshot-dir>
+// Against the live site: set APP_URL=https://jkirouac.github.io/perimenopause-diary/
 
 import { chromium } from 'playwright'
 import { createClient } from '@supabase/supabase-js'
 
-const APP = 'http://localhost:5173/perimenopause-diary/'
+const APP = process.env.APP_URL ?? 'http://localhost:5173/perimenopause-diary/'
 const out = process.argv[2] ?? 'walkthrough'
 const admin = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
@@ -155,6 +156,12 @@ try {
   await printPage.screenshot({ path: `${out}/12-doctor-print.png`, fullPage: true })
   await printPage.pdf({ path: `${out}/doctor-copy.pdf`, landscape: true, printBackground: true })
 
+  if (APP.startsWith('https://')) {
+    const sw = await page.evaluate(() =>
+      Promise.race([navigator.serviceWorker.ready.then(() => true), new Promise((r) => setTimeout(() => r(false), 10000))]),
+    )
+    check('Offline support (service worker) is active', sw === true)
+  }
   check('No script errors on any screen', errors.length === 0)
   if (errors.length) console.log(errors)
 } finally {

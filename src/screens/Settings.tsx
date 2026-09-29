@@ -187,7 +187,7 @@ function RowEditor({
         <button onClick={() => onMove(1)} disabled={isLast} aria-label={`Move ${row.label} down`}>
           ↓
         </button>
-        {row.key === null &&
+        {(row.key === null || row.key.startsWith('custom_')) &&
           (confirming ? (
             <>
               <button className="danger" onClick={onDelete}>
