@@ -4,7 +4,9 @@ import { useEntries } from '../lib/useEntries'
 import { CommentList, MonthGrid } from './MonthGrid'
 import { MonthNav, useMonth } from './Month'
 
-export function Doctor({ rows, name }: { rows: DiaryRow[]; name: string }) {
+// A printable copy of the month for whoever supports her care: her nurse practitioner,
+// doctor, midwife or anyone else. Never name just one profession (DESIGN.md, Voice).
+export function CareTeam({ rows, name }: { rows: DiaryRow[]; name: string }) {
   const m = useMonth()
   const { from, to } = monthRange(m.year, m.month)
   const { entries, error } = useEntries(from, to)
@@ -12,11 +14,13 @@ export function Doctor({ rows, name }: { rows: DiaryRow[]; name: string }) {
 
   return (
     <main className="screen wide-screen">
-      <div className="no-print">
+      <div className="no-print stack">
         <MonthNav {...m} />
+        <h2>For your care team</h2>
         <p>
-          A one-page copy of this month in the same layout as the CeMCOR paper diary. Print it, or choose{' '}
-          <strong>Save as PDF</strong> in the print screen to email or share it.
+          A one-page copy of this month, laid out like the CeMCOR paper diary, for your nurse practitioner, doctor,
+          midwife or anyone who supports your care. Print it, or choose <strong>Save as PDF</strong> in the print
+          screen to email it. Nothing is sent from the app.
         </p>
         <button className="primary" onClick={() => window.print()} disabled={!entries}>
           Print or save as PDF

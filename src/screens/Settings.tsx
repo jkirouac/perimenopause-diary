@@ -189,7 +189,7 @@ function NameField({ name, onSaved }: { name: string; onSaved: (n: string) => vo
       <h2>
         <label htmlFor="name">Your name</label>
       </h2>
-      <p className="legend">Shown at the top of the copy for your doctor.</p>
+      <p className="legend">Shown at the top of the copy for your care team.</p>
       <input
         id="name"
         value={text}

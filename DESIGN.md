@@ -12,10 +12,10 @@ All colours live as tokens at the top of `src/styles.css`. After changing any to
 |---|---|---|
 | Logging is open any time, more than once a day. Hot flushes don't wait for bedtime. | Tonight's "Hot flush just now? +1" card; Today/Yesterday | Built |
 | Gentle voice. Never shame a gap or a skipped day. | All copy (see Voice) | Built |
-| Symptoms use the 0–4 scale. It's quick, and it matches the Menopause Rating Scale doctors use. | Every strength row | Built |
-| Blank means "not recorded"; 0 means "none". They never look the same. | Tonight, Month grid, doctor copy | Built |
+| Symptoms use the 0–4 scale. It's quick, and it matches the Menopause Rating Scale clinicians use. | Every strength row | Built |
+| Blank means "not recorded"; 0 means "none". They never look the same. | Tonight, Month grid, care team copy | Built |
 | Light is the default on every phone (their preference, 2026-09-30). A calm dark mode, deep plum rather than black-and-white glare, is there for 3 a.m. if she wants it. | Settings → Appearance: Light, Dark, Match my phone | Built |
-| A report she can edit before an appointment (from Balance). | For doctor tab | Future: prints as-is today |
+| A report she can edit before an appointment (from Balance). | Care team tab | Future: prints as-is today |
 | Easy to put on the home screen. | Install banner on Tonight, card on sign-in and Settings. One tap on Android; two steps shown on iPhone | Built |
 | One-tap logging from the home screen (from Clue's widget). | Phone home screen | Future |
 
@@ -99,8 +99,9 @@ Gentle and plain, like Harmoni's "No shaming if you skip."
 - Say "Saved as you go", not "Don't forget to save!".
 - Name what she records ("Breast soreness"), and don't judge it ("Bad day").
 - Errors say what happened and what to do: "Couldn't save that change. Check your connection and try again."
+- Never name just one profession. Say "care team", or list several with the nurse practitioner first: "your nurse practitioner, doctor, midwife or anyone who supports your care". She is an NP; NPs provide primary care in Canada.
 - Keep the CeMCOR credit wherever the paper form's layout is used.
 
 ## Print
 
-The copy for her doctor prints in greys and black only, never purple. The numbers and letters carry the meaning, and colour only adds emphasis. It is landscape, one page per month, with a legend and the CeMCOR credit.
+The copy for her care team prints in greys and black only, never purple. The numbers and letters carry the meaning, and colour only adds emphasis. It is landscape, one page per month, with a legend and the CeMCOR credit.

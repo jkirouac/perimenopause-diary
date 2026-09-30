@@ -1,6 +1,6 @@
 # Daily Perimenopause Diary
 
-A phone app for keeping the CeMCOR **Daily Perimenopause Diary** each evening, with a month grid and a printable copy for a doctor.
+A phone app for keeping the CeMCOR **Daily Perimenopause Diary** each evening, with a month grid and a printable copy for her care team (nurse practitioner, doctor, midwife or anyone who supports her care).
 
 Based on the Daily Perimenopause Diary © Jerilynn C. Prior, Centre for Menstrual Cycle and Ovulation Research (CeMCOR), University of British Columbia — https://cemcor.ubc.ca. CeMCOR permits copies for personal or clinical use with authorship credited and not for profit; this project is personal and non-commercial.
 

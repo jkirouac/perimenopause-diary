@@ -7,20 +7,21 @@ import { SignIn } from './screens/SignIn'
 import { Tonight } from './screens/Tonight'
 import { Month } from './screens/Month'
 import { Trends } from './screens/Trends'
-import { Doctor } from './screens/Doctor'
+import { CareTeam } from './screens/CareTeam'
 import { Settings } from './screens/Settings'
 
 const TABS = [
   { id: 'tonight', label: 'Tonight' },
   { id: 'month', label: 'Month' },
   { id: 'trends', label: 'Trends' },
-  { id: 'doctor', label: 'For doctor' },
+  { id: 'care', label: 'Care team' },
   { id: 'settings', label: 'Settings' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
 function tabFromHash(): Tab {
-  const h = location.hash.slice(1)
+  // #doctor was this tab's old name; saved links still open it.
+  const h = location.hash.slice(1) === 'doctor' ? 'care' : location.hash.slice(1)
   return TABS.some((t) => t.id === h) ? (h as Tab) : 'tonight'
 }
 
@@ -111,8 +112,8 @@ function Diary({ email }: { email: string }) {
           <Month rows={rows} />
         ) : tab === 'trends' ? (
           <Trends rows={rows} heightIn={heightIn} />
-        ) : tab === 'doctor' ? (
-          <Doctor rows={rows} name={name} />
+        ) : tab === 'care' ? (
+          <CareTeam rows={rows} name={name} />
         ) : (
           <Settings
             rows={rows}
@@ -169,7 +170,7 @@ function TabIcon({ id }: { id: Tab }) {
           <path d="M3 17l5-5 4 3 8-8M15 7h5v5" />
         </svg>
       )
-    case 'doctor':
+    case 'care':
       return (
         <svg {...common}>
           <path d="M7 3h7l4 4v14H7z" />

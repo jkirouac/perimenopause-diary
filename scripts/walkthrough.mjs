@@ -125,7 +125,7 @@ try {
   for (const [tab, file] of [
     ['Month', '06-month'],
     ['Trends', '07-trends'],
-    ['For doctor', '08-doctor'],
+    ['Care team', '08-care-team'],
     ['Settings', '09-settings'],
   ]) {
     await page.click(`nav.tabs button:has-text("${tab}")`)
@@ -288,16 +288,32 @@ try {
   check(`No row name is split mid-word with large text (${split.join(', ') || 'none'})`, split.length === 0)
   await narrow.evaluate(() => document.querySelector('.rows').scrollIntoView())
   await narrow.screenshot({ path: `${out}/11b-large-text-360.png` })
+  // "Care team" fits its tab even with large text (two short lines are fine).
+  const tabFits = await narrow.evaluate(() => {
+    const tab = [...document.querySelectorAll('nav.tabs button')].find((b) => b.textContent.includes('Care team'))
+    const label = tab.querySelector('span')
+    return label.scrollWidth <= tab.clientWidth && tab.scrollHeight <= tab.clientHeight + 1
+  })
+  check('"Care team" fits its tab with large text', tabFits)
   await narrow.close()
 
   // Doctor printout, as a landscape PDF-style page.
   const printPage = await context.newPage()
   await printPage.setViewportSize({ width: 1100, height: 800 })
+  // Old #doctor links still open the care team page.
   await printPage.goto(`${APP}#doctor`)
   await printPage.waitForSelector('.sheet', { timeout: 15000 })
+  check('Old #doctor links open the care team page', (await printPage.locator('h2', { hasText: 'For your care team' }).count()) === 1)
+  // "doctor" only ever appears inside the inclusive list, never on its own.
+  const loneDoctor = await printPage.evaluate(() =>
+    document.body.innerText.replace(/nurse practitioner, doctor, midwife/g, '').toLowerCase().includes('doctor'),
+  )
+  check('No profession is singled out on the care team page', !loneDoctor)
+  await printPage.goto(`${APP}#care`)
+  await printPage.waitForSelector('.sheet', { timeout: 15000 })
   await printPage.emulateMedia({ media: 'print' })
-  await printPage.screenshot({ path: `${out}/12-doctor-print.png`, fullPage: true })
-  await printPage.pdf({ path: `${out}/doctor-copy.pdf`, landscape: true, printBackground: true })
+  await printPage.screenshot({ path: `${out}/12-care-team-print.png`, fullPage: true })
+  await printPage.pdf({ path: `${out}/care-team-copy.pdf`, landscape: true, printBackground: true })
 
   if (APP.startsWith('https://')) {
     const sw = await page.evaluate(() =>

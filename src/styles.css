@@ -723,7 +723,7 @@ p.row-sub {
   margin: 0;
 }
 
-/* ---------- doctor sheet ---------- */
+/* ---------- care team copy ---------- */
 
 .sheet {
   display: grid;
@@ -872,7 +872,7 @@ p.row-sub {
   grid-row: 2;
 }
 
-/* ---------- print (doctor copy) ---------- */
+/* ---------- print (copy for her care team) ---------- */
 
 @media print {
   @page {
@@ -886,7 +886,7 @@ p.row-sub {
     --ink: #000000;
     --muted: #444444;
     --line: #999999;
-    /* The doctor's copy prints in greys, never purple; the numbers and letters carry the meaning. */
+    /* The care team copy prints in greys, never purple; the numbers and letters carry the meaning. */
     --sev-0: #ffffff;
     --sev-1: #eeeeee;
     --sev-2: #d4d4d4;
