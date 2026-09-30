@@ -65,8 +65,50 @@ try {
   check('B can send feedback', fb === null)
   check("B can't read feedback back", ((await b.from('feedback').select()).data ?? []).length === 0)
 
+  // Name and height (used for the care team copy and BMI).
+  await a.from('profiles').upsert({ display_name: 'Person A', height_in: 65 }, { onConflict: 'user_id' })
+  check("B can't read A's name or height", ((await b.from('profiles').select().eq('user_id', ids[0])).data ?? []).length === 0)
+  await b.from('profiles').update({ display_name: 'changed', height_in: 70 }).eq('user_id', ids[0])
+  const { data: profileA } = await a.from('profiles').select('display_name, height_in').single()
+  check("B can't change A's name or height", profileA?.display_name === 'Person A' && Number(profileA?.height_in) === 65)
+
+  // Medication details: the time taken and the day's dose.
+  const { data: medA } = await a
+    .from('diary_rows')
+    .insert({ label: 'Estradiol', scale: 'tick', sort: 900, category: 'meds' })
+    .select()
+    .single()
+  await a.from('entries').insert({ date: '2026-09-01', row_id: medA.id, value: '1', extra: { time: '08:30', dose: '2 pumps' } })
+  check("B can't see A's medication time and dose", ((await b.from('entries').select('extra')).data ?? []).length === 0)
+
+  // B can't hang an entry of B's own on one of A's rows.
+  const { error: crossRow } = await b.from('entries').insert({ date: '2026-09-03', row_id: rowA.id, value: '2' })
+  check("B can't attach an entry to A's row", crossRow !== null)
+
+  await b.from('day_comments').update({ text: 'changed' }).eq('date', '2026-09-01')
+  await b.from('day_comments').delete().eq('date', '2026-09-01')
+  const { data: noteA } = await a.from('day_comments').select('text').single()
+  check("B can't edit or delete A's comments", noteA?.text === 'private note')
+
   const anonClient = createClient(url, anon, { auth: { persistSession: false } })
-  check('Signed-out visitor sees no entries', ((await anonClient.from('entries').select()).data ?? []).length === 0)
+  const seen = {}
+  for (const table of ['profiles', 'diary_rows', 'entries', 'day_comments', 'feedback']) {
+    seen[table] = ((await anonClient.from(table).select()).data ?? []).length
+  }
+  check(
+    `Signed-out visitor sees nothing in any table (${Object.values(seen).join(', ')})`,
+    Object.values(seen).every((n) => n === 0),
+  )
+
+  // Deleting an account removes only the person who asked.
+  const { error: deleteErr } = await b.rpc('delete_my_account')
+  const { data: bAfter } = await admin.auth.admin.getUserById(ids[1])
+  const aRows = (await a.from('diary_rows').select('id')).data ?? []
+  const aEntries = (await a.from('entries').select('value')).data ?? []
+  check(
+    "B deleting B's account leaves A's diary whole",
+    !deleteErr && !bAfter?.user && aRows.length === 2 && aEntries.length === 2,
+  )
 } finally {
   for (const id of ids) await admin.auth.admin.deleteUser(id)
   console.log(`Deleted ${ids.length} test accounts.`)
