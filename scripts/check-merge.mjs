@@ -193,7 +193,8 @@ if (mode === 'verify-test') {
   check('Fluid retention kept hidden because it has a value', row('fluid')?.hidden === true)
   check('Unused dropped rows removed', !row('breast_size') && !row('bbt') && !row('cup'))
   check('Her own symptom row sits in Physical', row('custom_itchy')?.category === 'physical')
-  check('Medications grouped', row('custom_Medication A')?.category === 'meds' && row('custom_VitaminD')?.category === 'meds')
+  const meds = rows.filter((r) => r.scale === 'tick')
+  check('Medications grouped', meds.length > 0 && meds.every((r) => r.category === 'meds'))
 }
 
 if (mode === 'delete-test') {
