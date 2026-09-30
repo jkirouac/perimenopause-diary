@@ -1,58 +1,76 @@
-/* Evening diary: calm dusk neutrals, one slate-blue accent, and an ember ramp for 0–4 strength.
-   Compared-with-usual is diverging: cool for less, ember for more. */
+/* Design language: see DESIGN.md. Harmoni-inspired lavender and violet with gold
+   accents and beige cards; a serif for headings. 0–4 strength is one lavender → deep
+   purple ramp; compared-with-usual diverges: gold for less, violet for more. */
 :root {
-  --bg: #f3f4f7;
+  --bg: #f8f7fb;
   --surface: #ffffff;
-  --ink: #1c2230;
-  --muted: #5c6474;
-  --line: #dce0e8;
-  --accent: #3f5a8f;
+  --surface-warm: #f7f3ee;
+  --ink: #311a41;
+  --muted: #65566f;
+  --line: #e6deef;
+  --accent: #734098;
   --accent-ink: #ffffff;
-  --accent-soft: #e6ebf5;
+  --accent-soft: #f1e6fa;
+  --emphasis: #b3337c;
+  --gold: #ffc654;
+  --gold-soft: #fff3d1;
+  --gold-ink: #5e4100;
   --danger: #a3303f;
+  --header-from: #f6ecff;
+  --header-to: #ead6fb;
 
-  --sev-0: #eef0f4;
-  --sev-1: #f7e8c9;
-  --sev-2: #f0cb8c;
-  --sev-3: #e2a255;
-  --sev-4: #c26f2c;
+  --sev-0: #f1eef5;
+  --sev-1: #eed2ff;
+  --sev-2: #dbb4fb;
+  --sev-3: #c093ec;
+  --sev-4: #734098;
   --sev-ink-strong: #ffffff;
 
-  --less-2: #9fb6dd;
-  --less-1: #d3def0;
-  --usual: #eef0f4;
-  --more-1: #f7e8c9;
-  --more-2: #e2a255;
+  --less-2: #f6c75e;
+  --less-1: #ffe9b3;
+  --usual: #f1eef5;
+  --more-1: #eed2ff;
+  --more-2: #c093ec;
 
-  --radius: 12px;
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --radius: 14px;
+  --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
   color-scheme: light;
 }
 
+/* Harmoni has no dark mode; this one is ours, for logging at 3 a.m.:
+   deep plum, lifted lavenders, and no pure white. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #11141b;
-    --surface: #1a1f29;
-    --ink: #e7eaf0;
-    --muted: #9aa2b2;
-    --line: #2d3442;
-    --accent: #8fa8dc;
-    --accent-ink: #11141b;
-    --accent-soft: #232c3d;
-    --danger: #ef8c98;
+    --bg: #17121d;
+    --surface: #211a29;
+    --surface-warm: #2a2230;
+    --ink: #eee6f4;
+    --muted: #b3a5c0;
+    --line: #372d42;
+    --accent: #cfa6f5;
+    --accent-ink: #1b1222;
+    --accent-soft: #35264a;
+    --emphasis: #f2a0cb;
+    --gold: #e7b451;
+    --gold-soft: #3a2f1a;
+    --gold-ink: #ffd98a;
+    --danger: #f09aa6;
+    --header-from: #241a30;
+    --header-to: #2f2140;
 
-    --sev-0: #252b37;
-    --sev-1: #4a3d24;
-    --sev-2: #7a5b2a;
-    --sev-3: #a8712f;
-    --sev-4: #d98a3f;
-    --sev-ink-strong: #11141b;
+    --sev-0: #2a2233;
+    --sev-1: #3d2b54;
+    --sev-2: #56397a;
+    --sev-3: #7a4fae;
+    --sev-4: #cfa6f5;
+    --sev-ink-strong: #1b1222;
 
-    --less-2: #4d6799;
-    --less-1: #2f3d57;
-    --usual: #252b37;
-    --more-1: #4a3d24;
-    --more-2: #a8712f;
+    --less-2: #7a5718;
+    --less-1: #4a3a1c;
+    --usual: #2a2233;
+    --more-1: #3d2b54;
+    --more-2: #6a449c;
     color-scheme: dark;
   }
 }
@@ -140,16 +158,31 @@ textarea {
   resize: vertical;
 }
 
+/* Headings in the serif (Fraunces), body in Figtree. */
+h1,
+h2 {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   line-height: 1.2;
   margin: 0;
   text-wrap: balance;
 }
 
 h2 {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   margin: 0;
+}
+
+/* At most one emphasised word per screen title, in pink italic (Harmoni). */
+.emph {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--emphasis);
 }
 
 h3 {
@@ -239,6 +272,13 @@ a {
   font-weight: 600;
 }
 
+.tabs button[aria-current='page'] svg {
+  box-sizing: content-box;
+  padding: 3px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+}
+
 /* ---------- sign in ---------- */
 
 .signin {
@@ -260,9 +300,17 @@ a {
 
 /* ---------- tonight ---------- */
 
+/* Soft lavender panel behind the day, echoing Harmoni's gradient header. */
 .day-head {
   display: grid;
   gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, var(--header-from), var(--header-to));
+}
+
+.day-date {
+  font-weight: 600;
 }
 
 .day-head p {
@@ -300,7 +348,8 @@ a {
   gap: 12px;
   padding: 14px 16px;
   border-radius: var(--radius);
-  background: var(--sev-1);
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
 }
 
 .flush-card div {
@@ -317,6 +366,24 @@ a {
   gap: 10px;
 }
 
+/* Section headings carry a line icon in a pastel rounded square (Harmoni). */
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tile {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .legend {
   margin: -4px 0 0;
   font-size: 0.8rem;
@@ -331,6 +398,7 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgb(49 26 65 / 0.06);
 }
 
 .rows > li + li {
@@ -768,6 +836,18 @@ p.row-sub {
     --ink: #000000;
     --muted: #444444;
     --line: #999999;
+    /* The doctor's copy prints in greys, never purple; the numbers and letters carry the meaning. */
+    --sev-0: #ffffff;
+    --sev-1: #eeeeee;
+    --sev-2: #d4d4d4;
+    --sev-3: #aaaaaa;
+    --sev-4: #555555;
+    --sev-ink-strong: #ffffff;
+    --less-2: #d4d4d4;
+    --less-1: #eeeeee;
+    --usual: #ffffff;
+    --more-1: #eeeeee;
+    --more-2: #d4d4d4;
     color-scheme: light;
   }
 

@@ -5,7 +5,7 @@ for (const [size, name] of [[192, 'icon-192.png'], [512, 'icon-512.png'], [180, 
   await sharp(src).resize(size, size).png().toFile(`public/${name}`)
 }
 // Maskable: same art with extra padding so Android's round crop keeps the moon whole.
-await sharp({ create: { width: 512, height: 512, channels: 4, background: '#2c3f66' } })
+await sharp({ create: { width: 512, height: 512, channels: 4, background: '#562f72' } })
   .composite([{ input: await sharp(src).resize(360, 360).png().toBuffer(), gravity: 'center' }])
   .png()
   .toFile('public/icon-maskable-512.png')

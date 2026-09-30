@@ -324,7 +324,7 @@ try {
   const expectedHead = await later.evaluate(() =>
     new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }),
   )
-  const shownHead = await later.locator('h1').textContent()
+  const shownHead = await later.locator('.day-date').textContent()
   check(`Returning on a new day shows that day (${shownHead})`, shownHead === expectedHead)
   check('…with Today selected', (await later.locator('.seg button[aria-pressed="true"]').textContent()) === 'Today')
   await later.close()

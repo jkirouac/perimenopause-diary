@@ -29,3 +29,6 @@ supabase/.branches/
 
 # Local account backups (health data; never commit)
 backups/
+
+# Local design screenshots for review
+design-previews/
