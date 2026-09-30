@@ -13,9 +13,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Daily Perimenopause Diary',
-        short_name: 'Diary',
-        description: 'An evening diary of perimenopause symptoms, based on the CeMCOR Daily Perimenopause Diary.',
+        name: 'Ebb & Flow',
+        short_name: 'Ebb & Flow',
+        description: "A calm evening check-in for perimenopause, based on CeMCOR's Daily Perimenopause Diary.",
         start_url: base,
         scope: base,
         display: 'standalone',

@@ -322,6 +322,15 @@ export async function sendFeedback(message: string) {
   if (error) throw error
 }
 
+// Deletes this account and everything recorded in it, then clears the phone's copy.
+export async function deleteAccount() {
+  const { error } = await supabase.rpc('delete_my_account')
+  if (error) throw error
+  clearLocal()
+  // The session died with the account, so only this phone needs signing out.
+  await supabase.auth.signOut({ scope: 'local' })
+}
+
 export function clearLocal() {
   for (const key of [OUTBOX, CACHE_ROWS, CACHE_ENTRIES]) {
     try {

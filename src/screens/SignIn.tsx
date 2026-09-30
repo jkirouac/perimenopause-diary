@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { CREDIT } from '../lib/diary'
 import { InstallCard } from './Install'
 
-export function SignIn() {
+export function SignIn({ onAbout }: { onAbout?: () => void }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'email' | 'code'>('email')
@@ -38,8 +38,15 @@ export function SignIn() {
 
   return (
     <main className="signin">
-      <h1>Daily Perimenopause Diary</h1>
-      <p className="muted">Your evening diary, on your phone. Only you can see what you record.</p>
+      {onAbout && (
+        <button type="button" className="link back-link" onClick={onAbout}>
+          ← About Ebb &amp; Flow
+        </button>
+      )}
+      <h1 className="brand">Ebb &amp; Flow</h1>
+      <p className="muted">
+        Based on CeMCOR’s Daily Perimenopause Diary. Sign in with your email, and we’ll send you a six-digit code.
+      </p>
       {step === 'email' ? (
         <form onSubmit={sendCode} className="stack">
           <label htmlFor="email">Email</label>

@@ -4,6 +4,8 @@ import { supabase } from './lib/supabase'
 import { ensureSetup, flush, loadProfile, loadRows, pendingCount } from './lib/store'
 import type { DiaryRow } from './lib/diary'
 import { SignIn } from './screens/SignIn'
+import { Landing } from './screens/Landing'
+import { useInstall } from './lib/install'
 import { Tonight } from './screens/Tonight'
 import { Month } from './screens/Month'
 import { Trends } from './screens/Trends'
@@ -35,8 +37,26 @@ export default function App() {
   }, [])
 
   if (session === undefined) return <p className="muted center">Loading…</p>
-  if (!session) return <SignIn />
+  if (!session) return <SignedOut />
   return <Diary email={session.user.email ?? ''} />
+}
+
+// Signed out: a browser tab opens on the landing page, with sign-in one tap away (#signin).
+// The installed app goes straight to sign-in; it never shows the landing page.
+function SignedOut() {
+  const { installed } = useInstall()
+  const [signingIn, setSigningIn] = useState(() => location.hash === '#signin')
+  useEffect(() => {
+    const onHash = () => setSigningIn(location.hash === '#signin')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  const show = (hash: string) => {
+    location.hash = hash
+    window.scrollTo(0, 0)
+  }
+  if (installed || signingIn) return <SignIn onAbout={installed ? undefined : () => show('')} />
+  return <Landing onStart={() => show('signin')} />
 }
 
 function Diary({ email }: { email: string }) {

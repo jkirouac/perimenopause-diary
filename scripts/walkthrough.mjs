@@ -33,7 +33,17 @@ try {
   // Don't send a real email; the code comes from the admin API instead.
   await page.route('**/auth/v1/otp**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
 
+  // Signed out in a browser tab: the landing page, with sign-in one tap away.
   await page.goto(APP)
+  await page.waitForSelector('.landing')
+  check('Signed out, a browser tab shows the landing page', (await page.locator('h1.brand', { hasText: 'Ebb & Flow' }).count()) === 1)
+  check('The page stays out of search results', (await page.locator('meta[name="robots"][content="noindex"]').count()) === 1)
+  const landingText = await page.evaluate(() => document.body.innerText)
+  check('The landing page never names one profession alone', !landingText.replace(/nurse practitioner, doctor, midwife/g, '').toLowerCase().includes('doctor'))
+  check('The landing page says it is not medical advice', landingText.includes('not medical advice'))
+  await page.screenshot({ path: `${out}/00-landing.png`, fullPage: true })
+  await page.locator('.landing-hero').getByRole('button', { name: 'Start your diary' }).click()
+  await page.waitForSelector('#email')
   await page.screenshot({ path: `${out}/01-sign-in.png` })
   await page.fill('#email', email)
   await page.click('text=Email me a sign-in code')
@@ -370,7 +380,7 @@ try {
   await page.screenshot({ path: `${out}/13-sign-out-warning.png` })
   await context.setOffline(false)
   await page.click('button:has-text("Try again")')
-  await page.waitForSelector('#email', { timeout: 10000 }).catch(() => {})
+  await page.waitForSelector('.landing, #email', { timeout: 10000 }).catch(() => {})
   const { data: sentBeforeSignOut } = await admin
     .from('entries')
     .select('value, diary_rows!inner(key)')
@@ -379,7 +389,7 @@ try {
     .eq('diary_rows.key', 'headache')
   check(
     'Try again sends the change, then signs out',
-    sentBeforeSignOut[0]?.value === '4' && (await page.locator('#email').count()) === 1,
+    sentBeforeSignOut[0]?.value === '4' && (await page.locator('.landing, #email').count()) === 1,
   )
 
   // Coming back to the app on a later day shows the new day, not the old one.
@@ -388,7 +398,7 @@ try {
   const laterContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
   const later = await laterContext.newPage()
   await later.route('**/auth/v1/otp**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
-  await later.goto(APP)
+  await later.goto(`${APP}#signin`)
   await later.fill('#email', email)
   await later.click('text=Email me a sign-in code')
   await later.fill('#code', again.properties.email_otp)
@@ -407,6 +417,41 @@ try {
   check(`Returning on a new day shows that day (${shownHead})`, shownHead === expectedHead)
   check('…with Today selected', (await later.locator('.seg button[aria-pressed="true"]').textContent()) === 'Today')
   await later.close()
+
+  // The installed app, signed out, goes straight to sign-in: no landing page.
+  const installedOut = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const appOnly = await installedOut.newPage()
+  await appOnly.addInitScript(() => {
+    const real = window.matchMedia.bind(window)
+    window.matchMedia = (q) =>
+      q.includes('display-mode: standalone') ? { ...real(q), matches: true, media: q, addEventListener() {} } : real(q)
+  })
+  await appOnly.goto(APP)
+  await appOnly.waitForSelector('#email')
+  check('The installed app skips the landing page', (await appOnly.locator('.landing').count()) === 0)
+  await installedOut.close()
+
+  // Deleting the account removes the diary and signs out.
+  const { data: last } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
+  const deleting = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const del = await deleting.newPage()
+  await del.route('**/auth/v1/otp**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
+  await del.goto(`${APP}#signin`)
+  await del.fill('#email', email)
+  await del.click('text=Email me a sign-in code')
+  await del.fill('#code', last.properties.email_otp)
+  await del.click('button:has-text("Sign in")')
+  await del.waitForSelector('.rows')
+  await del.click('nav.tabs button:has-text("Settings")')
+  await del.getByRole('button', { name: 'Delete my account and diary' }).click()
+  await del.screenshot({ path: `${out}/14-delete-confirm.png` })
+  await del.getByRole('button', { name: 'Delete everything' }).click()
+  await del.waitForSelector('.landing, #email', { timeout: 15000 }).catch(() => {})
+  const { data: leftRows } = await admin.from('diary_rows').select('id').eq('user_id', userId)
+  const { data: gone } = await admin.auth.admin.getUserById(userId)
+  check('Deleting the account removes the diary', leftRows.length === 0 && !gone?.user)
+  check('…and signs out', (await del.locator('.rows').count()) === 0)
+  await deleting.close()
 
   check('No script errors on any screen', errors.length === 0)
   if (errors.length) console.log(errors)

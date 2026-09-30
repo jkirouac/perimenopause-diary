@@ -105,3 +105,15 @@ Gentle and plain, like Harmoni's "No shaming if you skip."
 ## Print
 
 The copy for her care team prints in greys and black only, never purple. The numbers and letters carry the meaning, and colour only adds emphasis. It is landscape, one page per month, with a legend and the CeMCOR credit.
+
+## Landing page
+
+What a signed-out visitor sees in a browser tab (`src/screens/Landing.tsx`). The installed app never shows it; it opens straight to sign-in. The audience is friends and her patients, who get the link directly, so the page carries `noindex` and explains rather than sells.
+
+- **Name:** **Ebb & Flow**, always with "Based on CeMCOR's Daily Perimenopause Diary" close by. The printed copy keeps CeMCOR's own title.
+- **Positioning:** a free, private, evening version of the paper diary clinicians already use. Say what Ebb & Flow does; never name or criticise other apps.
+- **Every claim must be true of what's built.** Free, no predictions, 0–4 like the Menopause Rating Scale, hot flushes logged any time, blank ≠ none, a copy for the care team, stored in Canada, no ads or AI, works offline, download or delete at any time. If a feature changes, change the page.
+- **Privacy wording:** "Your diary is stored in Canada, and only you can see it in the app. Nothing is sold or shared."
+- **Not medical advice:** it's said in the questions and the footer, and in Settings.
+- **Screenshots** come from `scripts/landing-shots.mjs`, which uses a throwaway account with invented entries and never a real diary. Re-run it when the screens change.
+- **Look:** the same tokens and type as the app. A lavender hero with the Tonight screen in a phone frame, white cards, icon tiles from `SectionIcon`, and one pink italic word ("A calm *evening* check-in").

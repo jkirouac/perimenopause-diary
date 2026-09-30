@@ -14,6 +14,7 @@ import { today } from '../lib/dates'
 import {
   addRow,
   clearLocal,
+  deleteAccount,
   deleteRow,
   flush,
   loadEntries,
@@ -126,6 +127,7 @@ export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameCha
         <h2>Your data</h2>
         <p className="legend">Download everything you've recorded as a spreadsheet file.</p>
         <ExportButton rows={rows} />
+        <DeleteAccount />
       </section>
 
       <Feedback />
@@ -139,11 +141,51 @@ export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameCha
           </a>
         </p>
         <p className="muted small">
-          Signed in as {email}. Your entries are stored in Canada and only your account can read them.
+          Signed in as {email}. Your diary is stored in Canada, and only you can see it in the app. Nothing is sold
+          or shared.
+        </p>
+        <p className="muted small">
+          Ebb &amp; Flow is a diary, not medical advice. Bring questions about your symptoms or treatment to your
+          care team.
         </p>
         <SignOut />
       </section>
     </main>
+  )
+}
+
+// Deletes the account and everything in it, after a second tap. Suggests downloading first.
+function DeleteAccount() {
+  const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState('')
+  if (!confirming)
+    return (
+      <button className="link danger-link" onClick={() => setConfirming(true)}>
+        Delete my account and diary
+      </button>
+    )
+  return (
+    <div className="stack">
+      <p className="error" role="alert">
+        This deletes your account and everything you've recorded, for good. Download your diary first if you want to
+        keep a copy.
+      </p>
+      <button
+        className="danger"
+        onClick={async () => {
+          setError('')
+          try {
+            await deleteAccount()
+          } catch {
+            setError("Couldn't delete your account. Check your connection and try again.")
+          }
+        }}
+      >
+        Delete everything
+      </button>
+      <button onClick={() => setConfirming(false)}>Keep my account</button>
+      {error && <p className="error">{error}</p>}
+    </div>
   )
 }
 

@@ -622,6 +622,258 @@ p.row-sub {
   gap: 14px;
 }
 
+/* ---------- landing page (signed out, browser tab only) ---------- */
+
+.brand {
+  font-size: clamp(2.2rem, 9vw, 3.4rem);
+  line-height: 1.05;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.back-link {
+  justify-self: start;
+}
+
+button.link.danger-link {
+  justify-self: start;
+  color: var(--danger);
+}
+
+.landing {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 48px;
+  display: grid;
+  gap: 56px;
+}
+
+.landing p {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.landing h2 {
+  font-size: clamp(1.4rem, 5vw, 1.9rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.landing h3 {
+  font-size: 1rem;
+}
+
+.landing-hero {
+  display: grid;
+  gap: 32px;
+  padding: 28px 20px 0;
+  border-radius: calc(var(--radius) * 2);
+  background: linear-gradient(160deg, var(--header-from), var(--header-to));
+  overflow: hidden;
+}
+
+.landing-hero-text {
+  display: grid;
+  gap: 14px;
+  align-content: center;
+}
+
+.tagline {
+  font-family: var(--display);
+  font-size: clamp(1.35rem, 5.5vw, 1.8rem);
+  line-height: 1.25;
+}
+
+.lede {
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 6px;
+}
+
+.cta .primary {
+  min-height: 52px;
+  padding: 0 28px;
+  font-size: 1.05rem;
+}
+
+/* Screenshots sit in a simple phone frame. In the hero, only its top half shows, resting on the panel's edge. */
+.phone {
+  margin: 0;
+  justify-self: center;
+  width: min(300px, 82vw);
+  border-radius: 34px;
+  border: 8px solid var(--ink);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 18px 40px rgb(49 26 65 / 0.18);
+}
+
+.phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.landing-hero .phone {
+  align-self: end;
+  max-height: 440px;
+  border-bottom: 0;
+  border-radius: 34px 34px 0 0;
+  box-shadow: 0 -4px 30px rgb(49 26 65 / 0.14);
+}
+
+.landing-section {
+  display: grid;
+  gap: 18px;
+}
+
+.feature-cards,
+.track-list,
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.feature-cards {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.feature-cards li {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgb(49 26 65 / 0.06);
+}
+
+.feature-cards p,
+.track-list p {
+  color: var(--muted);
+}
+
+.track-list {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.track-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.track-list li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.landing-split {
+  align-items: center;
+}
+
+.landing-split > div {
+  display: grid;
+  gap: 12px;
+}
+
+.plain-list li {
+  padding: 14px 16px 14px 44px;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.plain-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 16px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.faq {
+  display: grid;
+  gap: 8px;
+}
+
+.faq details {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 16px;
+}
+
+.faq summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-weight: 600;
+}
+
+.faq details p {
+  padding-bottom: 14px;
+  color: var(--muted);
+}
+
+.landing-close {
+  justify-items: center;
+  text-align: center;
+  padding: 32px 16px;
+  border-radius: calc(var(--radius) * 2);
+  background: linear-gradient(160deg, var(--header-from), var(--header-to));
+}
+
+.landing-close .cta {
+  justify-content: center;
+}
+
+.landing-footer {
+  display: grid;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
+@media (min-width: 860px) {
+  .landing {
+    gap: 80px;
+  }
+
+  .landing-hero {
+    grid-template-columns: 1.1fr 0.9fr;
+    padding: 56px 48px 0;
+  }
+
+  .landing-split {
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+  }
+
+  .landing-split.reverse > div {
+    order: 2;
+  }
+}
+
 /* ---------- month grid ---------- */
 
 .month-nav {
