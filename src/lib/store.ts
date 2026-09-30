@@ -118,14 +118,48 @@ function inRange(date: string, from: string, to: string) {
   return date >= from && date <= to
 }
 
+// The server sends at most this many rows per request (max_rows in supabase/config.toml).
+const PAGE = 1000
+
+// Asks for page after page until one comes back short. Each query must have a
+// complete order, or rows can repeat or go missing between pages.
+async function selectAll<T>(
+  page: (first: number, last: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+): Promise<{ data: T[]; error: null } | { data: null; error: unknown }> {
+  const all: T[] = []
+  for (let first = 0; ; first += PAGE) {
+    const { data, error } = await page(first, first + PAGE - 1)
+    if (error) return { data: null, error }
+    all.push(...(data ?? []))
+    if (!data || data.length < PAGE) return { data: all, error: null }
+  }
+}
+
 export async function loadEntries(from: string, to: string): Promise<Entries> {
   const cache = read<Entries>(CACHE_ENTRIES, { values: {}, comments: {} })
   const [e, c] = await Promise.all([
-    supabase.from('entries').select('date, row_id, value').gte('date', from).lte('date', to),
-    supabase.from('day_comments').select('date, text').gte('date', from).lte('date', to),
+    selectAll<{ date: string; row_id: string; value: string }>((first, last) =>
+      supabase
+        .from('entries')
+        .select('date, row_id, value')
+        .gte('date', from)
+        .lte('date', to)
+        .order('date')
+        .order('row_id')
+        .range(first, last),
+    ),
+    selectAll<{ date: string; text: string }>((first, last) =>
+      supabase
+        .from('day_comments')
+        .select('date, text')
+        .gte('date', from)
+        .lte('date', to)
+        .order('date')
+        .range(first, last),
+    ),
   ])
   let fresh: Entries
-  if (e.error || c.error) {
+  if (!e.data || !c.data) {
     // Offline: fall back to what this phone last saw.
     fresh = { values: {}, comments: {} }
     for (const [d, v] of Object.entries(cache.values)) if (inRange(d, from, to)) fresh.values[d] = v

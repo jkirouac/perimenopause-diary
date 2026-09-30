@@ -116,6 +116,12 @@ try {
   check('Yesterday starts blank', (await progress()).startsWith('0 of'))
   await page.screenshot({ path: `${out}/05-yesterday.png` })
 
+  // A comment typed and left, with no tap elsewhere, still saves.
+  await page.fill('#comment', 'Typed and left')
+  await page.waitForTimeout(3000)
+  const { data: leftComment } = await admin.from('day_comments').select('text').eq('user_id', userId).eq('text', 'Typed and left')
+  check('A comment saves without leaving the box', leftComment.length === 1)
+
   for (const [tab, file] of [
     ['Month', '06-month'],
     ['Trends', '07-trends'],
@@ -142,6 +148,18 @@ try {
   check('Treatment appears on Tonight', (await page.locator('.row', { hasText: 'VitaminD' }).count()) === 1)
   await page.screenshot({ path: `${out}/10-tonight-after-settings.png`, fullPage: true })
 
+  // Moving a treatment up swaps it with the treatment above, not a row in another section.
+  await page.click('nav.tabs button:has-text("Settings")')
+  await page.fill('#add-tick', 'Magnesium')
+  await page.locator('.add-row').nth(1).getByRole('button', { name: 'Add' }).click()
+  await page.waitForTimeout(1500)
+  await page.getByRole('button', { name: 'Move Magnesium up' }).click()
+  await page.waitForTimeout(1500)
+  const treatmentGroup = page.locator('.settings-group', { hasText: 'Treatments and supplements' })
+  const treatmentOrder = await treatmentGroup.locator('input[aria-label="Row name"]').evaluateAll((els) => els.map((e) => e.value))
+  check(`Move up works inside a section (${treatmentOrder.join(', ')})`, treatmentOrder.join('|') === 'Magnesium|VitaminD')
+  check('First row of a section can’t move up', await page.getByRole('button', { name: 'Move Magnesium up' }).isDisabled())
+
   // Dark mode.
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.screenshot({ path: `${out}/11-dark.png` })
@@ -162,6 +180,93 @@ try {
     )
     check('Offline support (service worker) is active', sw === true)
   }
+  // More than the server's 1,000 rows per request: 94 earlier days of every row.
+  const { data: rowList } = await admin.from('diary_rows').select('id, key').eq('user_id', userId)
+  const back = (n) => {
+    const d = new Date()
+    d.setDate(d.getDate() - n)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+  const bulk = []
+  for (let n = 2; n <= 95; n++) for (const r of rowList) bulk.push({ user_id: userId, date: back(n), row_id: r.id, value: '1' })
+  await admin.from('entries').insert(bulk)
+  const allDates = []
+  for (let first = 0; ; first += 1000) {
+    const { data } = await admin.from('entries').select('date').eq('user_id', userId).order('date').order('row_id').range(first, first + 999)
+    allDates.push(...data)
+    if (data.length < 1000) break
+  }
+  const { data: commentDates } = await admin.from('day_comments').select('date').eq('user_id', userId)
+  const expectedDays = new Set([...allDates, ...commentDates].map((r) => r.date)).size
+  await page.reload()
+  await page.click('nav.tabs button:has-text("Trends")')
+  await page.click('.seg button:has-text("Last 3 months")')
+  await page.waitForTimeout(3000)
+  const headacheCaption = await page.locator('figure.spark', { hasText: 'Headache' }).locator('figcaption').textContent()
+  // Seeded days 2–89 back, plus today's 3; yesterday was cleared.
+  check(`Trends shows all 3 months past 1,000 rows (${headacheCaption})`, headacheCaption.includes('89 days'))
+  await page.click('nav.tabs button:has-text("Settings")')
+  await page.click('button:has-text("Download my diary")')
+  await page.waitForSelector('text=/Downloaded \\d+ days/')
+  const exported = await page.locator('text=/Downloaded \\d+ days/').textContent()
+  check(`Export includes every day (${exported}, expected ${expectedDays})`, exported.includes(`${expectedDays} days`))
+
+  // Signing out with unsent saves asks first instead of deleting them.
+  await page.click('nav.tabs button:has-text("Tonight")')
+  await page.waitForSelector('.rows')
+  await context.setOffline(true)
+  await headache.getByRole('button', { name: '4, very intense' }).click()
+  await page.click('nav.tabs button:has-text("Settings")')
+  const signOutAt = Date.now()
+  await page.click('button:has-text("Sign out")')
+  await page.waitForSelector('text=reached the server yet', { timeout: 15000 }).catch(() => {})
+  const warnedAfter = Date.now() - signOutAt
+  check(
+    `Sign-out warns about unsent changes within 10 s (${(warnedAfter / 1000).toFixed(1)} s)`,
+    (await page.locator('text=reached the server yet').count()) === 1 && warnedAfter < 10000,
+  )
+  check('…and keeps them on the phone', await page.evaluate(() => JSON.parse(localStorage.getItem('pd-outbox') ?? '[]').length > 0))
+  await page.screenshot({ path: `${out}/13-sign-out-warning.png` })
+  await context.setOffline(false)
+  await page.click('button:has-text("Try again")')
+  await page.waitForSelector('#email', { timeout: 10000 }).catch(() => {})
+  const { data: sentBeforeSignOut } = await admin
+    .from('entries')
+    .select('value, diary_rows!inner(key)')
+    .eq('user_id', userId)
+    .eq('date', back(0))
+    .eq('diary_rows.key', 'headache')
+  check(
+    'Try again sends the change, then signs out',
+    sentBeforeSignOut[0]?.value === '4' && (await page.locator('#email').count()) === 1,
+  )
+
+  // Coming back to the app on a later day shows the new day, not the old one.
+  // Runs last, in its own signed-in window, because the fake clock upsets the sign-in.
+  const { data: again } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
+  const laterContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const later = await laterContext.newPage()
+  await later.route('**/auth/v1/otp**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
+  await later.goto(APP)
+  await later.fill('#email', email)
+  await later.click('text=Email me a sign-in code')
+  await later.fill('#code', again.properties.email_otp)
+  await later.click('button:has-text("Sign in")')
+  await later.waitForSelector('.rows')
+  const tomorrowEvening = new Date()
+  tomorrowEvening.setDate(tomorrowEvening.getDate() + 1)
+  tomorrowEvening.setHours(20, 0, 0, 0)
+  await later.clock.setFixedTime(tomorrowEvening)
+  await later.evaluate(() => document.dispatchEvent(new Event('visibilitychange')))
+  await later.waitForTimeout(2000)
+  const expectedHead = await later.evaluate(() =>
+    new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }),
+  )
+  const shownHead = await later.locator('h1').textContent()
+  check(`Returning on a new day shows that day (${shownHead})`, shownHead === expectedHead)
+  check('…with Today selected', (await later.locator('.seg button[aria-pressed="true"]').textContent()) === 'Today')
+  await later.close()
+
   check('No script errors on any screen', errors.length === 0)
   if (errors.length) console.log(errors)
 } finally {

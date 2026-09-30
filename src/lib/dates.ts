@@ -1,5 +1,7 @@
 // Dates are local calendar days stored as YYYY-MM-DD.
 
+import { useEffect, useState } from 'react'
+
 export function isoDay(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -20,6 +22,25 @@ export function addDays(s: string, n: number): string {
 
 export function today(): string {
   return isoDay(new Date())
+}
+
+// Today's date, re-read whenever the app comes back to the front. A phone can keep
+// the app open in the background for days, so the date from when a screen first
+// opened can't be trusted. It doesn't change while the app stays in front, so a
+// diary filled in across midnight stays on the day it was started.
+export function useToday(): string {
+  const [day, setDay] = useState(today)
+  useEffect(() => {
+    const check = () => setDay(today())
+    const onVisible = () => document.visibilityState === 'visible' && check()
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', check)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', check)
+    }
+  }, [])
+  return day
 }
 
 export function daysInMonth(year: number, month: number): number {

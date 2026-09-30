@@ -1,7 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { CREDIT, SCALE_NAMES, SECTIONS, type DiaryRow, type Scale } from '../lib/diary'
 import { today } from '../lib/dates'
-import { addRow, clearLocal, deleteRow, loadEntries, saveName, sendFeedback, updateRow } from '../lib/store'
+import {
+  addRow,
+  clearLocal,
+  deleteRow,
+  flush,
+  loadEntries,
+  pendingCount,
+  saveName,
+  sendFeedback,
+  updateRow,
+} from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 interface Props {
@@ -25,13 +35,17 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
     }
   }
 
-  function move(row: DiaryRow, dir: -1 | 1) {
-    const i = rows.findIndex((r) => r.id === row.id)
-    const other = rows[i + dir]
+  // Moves a row past its neighbour in the same section, the order the screens show.
+  function move(list: DiaryRow[], row: DiaryRow, dir: -1 | 1) {
+    const i = list.findIndex((r) => r.id === row.id)
+    const other = list[i + dir]
     if (!other) return
+    // Two rows added in quick succession can share a sort number; swapping equal
+    // numbers would change nothing, so nudge past the neighbour instead.
+    const rowSort = other.sort === row.sort ? row.sort + dir : other.sort
     void run(async () => {
-      await updateRow(row.id, { sort: other.sort })
-      await updateRow(other.id, { sort: row.sort })
+      await updateRow(row.id, { sort: rowSort })
+      if (other.sort !== row.sort) await updateRow(other.id, { sort: row.sort })
     })
   }
 
@@ -60,11 +74,11 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
                   <li key={r.id}>
                     <RowEditor
                       row={r}
-                      isFirst={rows[0].id === r.id}
-                      isLast={rows.at(-1)?.id === r.id}
+                      isFirst={list[0].id === r.id}
+                      isLast={list.at(-1)?.id === r.id}
                       onRename={(label) => run(() => updateRow(r.id, { label }))}
                       onToggle={() => run(() => updateRow(r.id, { hidden: !r.hidden }))}
-                      onMove={(dir) => move(r, dir)}
+                      onMove={(dir) => move(list, r, dir)}
                       onDelete={() => run(() => deleteRow(r.id))}
                     />
                   </li>
@@ -104,16 +118,42 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
         <p className="muted small">
           Signed in as {email}. Your entries are stored in Canada and only your account can read them.
         </p>
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut()
-            clearLocal()
-          }}
-        >
-          Sign out
-        </button>
+        <SignOut />
       </section>
     </main>
+  )
+}
+
+// Signing out clears this phone's copy, including saves not yet sent, so send
+// them first and ask before throwing any away.
+function SignOut() {
+  const [unsent, setUnsent] = useState(0)
+  async function signOut(anyway: boolean) {
+    if (!anyway) {
+      // Offline with an expired sign-in, sending can retry for most of a minute; don't wait that long.
+      await Promise.race([flush(), new Promise((resolve) => setTimeout(resolve, 5000))])
+      const left = pendingCount()
+      if (left > 0) {
+        setUnsent(left)
+        return
+      }
+    }
+    await supabase.auth.signOut()
+    clearLocal()
+  }
+  if (unsent === 0) return <button onClick={() => signOut(false)}>Sign out</button>
+  return (
+    <div className="stack">
+      <p className="error" role="alert">
+        {unsent} {unsent === 1 ? 'change hasn’t' : 'changes haven’t'} reached the server yet. Signing out now
+        deletes {unsent === 1 ? 'it' : 'them'} from this phone. Connect to the internet first to keep{' '}
+        {unsent === 1 ? 'it' : 'them'}.
+      </p>
+      <button className="danger" onClick={() => signOut(true)}>
+        Sign out and delete {unsent === 1 ? 'it' : 'them'}
+      </button>
+      <button onClick={() => signOut(false)}>Try again</button>
+    </div>
   )
 }
 

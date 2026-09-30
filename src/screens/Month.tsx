@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import type { DiaryRow } from '../lib/diary'
-import { daysInMonth, isoDay, monthName, monthRange } from '../lib/dates'
+import { daysInMonth, isoDay, monthName, monthRange, parseDay, useToday } from '../lib/dates'
 import { useEntries } from '../lib/useEntries'
 import { CommentList, MonthGrid } from './MonthGrid'
 
 export function useMonth() {
-  const now = new Date()
+  const now = parseDay(useToday())
   const [ym, setYm] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const step = (delta: number) =>
     setYm(({ year, month }) => {

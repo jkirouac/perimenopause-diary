@@ -1,14 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { COMPARED, SECTIONS, SEVERITY, noneValue, type DiaryRow } from '../lib/diary'
-import { addDays, isNightNow, longDate, today } from '../lib/dates'
+import { addDays, isNightNow, longDate, useToday } from '../lib/dates'
 import { useEntries } from '../lib/useEntries'
 
 type SetValue = (value: string | null) => void
 
 export function Tonight({ rows }: { rows: DiaryRow[] }) {
-  const t = today()
+  const t = useToday()
   const y = addDays(t, -1)
-  const [date, setDate] = useState(t)
+  const [which, setWhich] = useState<'today' | 'yesterday'>('today')
+  // Coming back on a new day always starts on the new day.
+  const [shownFor, setShownFor] = useState(t)
+  if (shownFor !== t) {
+    setShownFor(t)
+    setWhich('today')
+  }
+  const date = which === 'today' ? t : y
+  const setDate = (d: string) => setWhich(d === t ? 'today' : 'yesterday')
   const { entries, error, setValue, setComment } = useEntries(y, t)
 
   const visible = rows.filter((r) => !r.hidden)
@@ -52,7 +60,7 @@ export function Tonight({ rows }: { rows: DiaryRow[] }) {
                 <strong>Hot flush just now?</strong>
                 <span className="muted">
                   Adds one to {flushRow.label.replace('# of flushes – ', '')} flushes · today:{' '}
-                  {day[flushRow.id] ?? 0}
+                  {day[flushRow.id] ?? '–'}
                 </span>
               </div>
               <button
@@ -172,10 +180,39 @@ function RowInput({ row, value, set }: { row: DiaryRow; value: string | undefine
   }
 }
 
+// Saves a text field shortly after typing stops, and straight away if the app is
+// put in the background or closed, when a phone may never fire the field's blur.
+function useSaveWhileTyping(text: string, dirty: boolean, commit: () => void) {
+  const latest = useRef({ dirty, commit })
+  useLayoutEffect(() => {
+    latest.current = { dirty, commit }
+  })
+  useEffect(() => {
+    if (!dirty) return
+    const timer = setTimeout(() => latest.current.commit(), 800)
+    return () => clearTimeout(timer)
+  }, [text, dirty])
+  useEffect(() => {
+    const saveNow = () => latest.current.dirty && latest.current.commit()
+    const onHidden = () => document.visibilityState === 'hidden' && saveNow()
+    document.addEventListener('visibilitychange', onHidden)
+    window.addEventListener('pagehide', saveNow)
+    return () => {
+      document.removeEventListener('visibilitychange', onHidden)
+      window.removeEventListener('pagehide', saveNow)
+      saveNow() // Leaving the screen, or switching between Today and Yesterday.
+    }
+  }, [])
+}
+
 function NumberInput({ row, value, set }: { row: DiaryRow; value: string | undefined; set: SetValue }) {
   const [text, setText] = useState(value ?? '')
   useEffect(() => setText(value ?? ''), [value])
   const id = `num-${row.id}`
+  const typed = text.trim().replace(',', '.')
+  const dirty = typed !== (value ?? '')
+  const commit = () => set(typed === '' ? null : typed)
+  useSaveWhileTyping(text, dirty, commit)
   return (
     <div className="row row-inline">
       <label className="row-label" htmlFor={id}>
@@ -187,11 +224,7 @@ function NumberInput({ row, value, set }: { row: DiaryRow; value: string | undef
         inputMode="decimal"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          const v = text.trim().replace(',', '.')
-          if (v === (value ?? '')) return
-          set(v === '' ? null : v)
-        }}
+        onBlur={() => dirty && commit()}
       />
     </div>
   )
@@ -199,6 +232,9 @@ function NumberInput({ row, value, set }: { row: DiaryRow; value: string | undef
 
 function Comment({ initial, save }: { initial: string; save: (t: string) => void }) {
   const [text, setText] = useState(initial)
+  const dirty = text !== initial
+  const commit = () => save(text)
+  useSaveWhileTyping(text, dirty, commit)
   return (
     <section className="section">
       <h2>
@@ -210,7 +246,7 @@ function Comment({ initial, save }: { initial: string; save: (t: string) => void
         rows={3}
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={() => text !== initial && save(text)}
+        onBlur={() => dirty && commit()}
       />
     </section>
   )

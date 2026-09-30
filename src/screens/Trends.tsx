@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { DiaryRow } from '../lib/diary'
-import { addDays, parseDay, today } from '../lib/dates'
+import { addDays, parseDay, useToday } from '../lib/dates'
 import { useEntries } from '../lib/useEntries'
 import type { Entries } from '../lib/store'
 
@@ -11,7 +11,7 @@ const CMP_Y: Record<string, number> = { M: -2, L: -1, U: 0, Y: 1, Z: 2 }
 
 export function Trends({ rows }: { rows: DiaryRow[] }) {
   const [span, setSpan] = useState(30)
-  const to = today()
+  const to = useToday()
   const from = addDays(to, -(span - 1))
   const { entries, error } = useEntries(from, to)
   const days = Array.from({ length: span }, (_, i) => addDays(from, i))

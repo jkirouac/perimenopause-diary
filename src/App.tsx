@@ -59,14 +59,21 @@ function Diary({ email }: { email: string }) {
   }, [reloadRows])
 
   // Send saves made offline once the connection is back, and keep the count current.
+  // A save can also fail with the phone online (a dropped request), so retry when
+  // the app comes back to the front and every minute while anything is waiting.
   useEffect(() => {
     const sync = () => flush().finally(() => setPending(pendingCount()))
+    const onVisible = () => document.visibilityState === 'visible' && sync()
     sync()
     window.addEventListener('online', sync)
+    document.addEventListener('visibilitychange', onVisible)
     const timer = setInterval(() => setPending(pendingCount()), 3000)
+    const retry = setInterval(() => pendingCount() > 0 && sync(), 60_000)
     return () => {
       window.removeEventListener('online', sync)
+      document.removeEventListener('visibilitychange', onVisible)
       clearInterval(timer)
+      clearInterval(retry)
     }
   }, [])
 
@@ -86,8 +93,8 @@ function Diary({ email }: { email: string }) {
     <div className="app">
       {pending > 0 && (
         <p className="offline no-print" role="status">
-          {pending} {pending === 1 ? 'change is' : 'changes are'} saved on this phone and will send when you're back
-          online.
+          {pending} {pending === 1 ? 'change is' : 'changes are'} saved on this phone and will send on their own
+          once there's a connection.
         </p>
       )}
       {error && <p className="error" role="alert">{error}</p>}
