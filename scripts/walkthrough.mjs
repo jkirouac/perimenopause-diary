@@ -159,11 +159,12 @@ try {
   const labels = await page.locator('.row-label').allTextContents()
   check(
     'The merged and new rows are there',
-    ['Breast soreness', 'Joint pain', 'Pain affecting sleep', 'Vaginal pain/dryness', 'Pimples/acne', 'Brain fog',
+    ['Breast soreness', 'Joint pain', 'Pain affecting sleep', 'Vaginal pain/dryness', 'Skin clearness', 'Brain fog',
       'Irritability / anger / rage', 'Mood swings / emotionally labile', 'Hot flushes / night sweats – night',
       'Weight (lb)', 'Blood pressure'].every((l) => labels.some((x) => x.startsWith(l))),
   )
   check('The old split breast rows are gone', !labels.some((x) => x.startsWith('Breast sore –')))
+  check('Pimples/acne is replaced by Skin clearness', !labels.some((x) => x.startsWith('Pimples')))
 
   const rowId = async (label) =>
     (await admin.from('diary_rows').select('id').eq('user_id', userId).eq('label', label).single()).data.id

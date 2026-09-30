@@ -127,7 +127,7 @@ if (mode === 'compare') {
     const was = byKey(before, oldKey)
     if (was) check(`${oldKey} became ${newKey}, same row`, liveRow[was.id]?.key === newKey)
   }
-  for (const key of ['fluid', 'breast_size', 'bbt', 'cup']) {
+  for (const key of ['fluid', 'breast_size', 'bbt', 'cup', 'acne']) {
     const was = byKey(before, key)
     if (!was) continue
     const used = before.entries.some((e) => e.row_id === was.id)
@@ -137,7 +137,7 @@ if (mode === 'compare') {
       used ? now?.hidden === true : now === undefined,
     )
   }
-  const kept = before.rows.filter((r) => !['breast_side', 'fluid', 'breast_size', 'bbt', 'cup'].includes(r.key))
+  const kept = before.rows.filter((r) => !['breast_side', 'fluid', 'breast_size', 'bbt', 'cup', 'acne'].includes(r.key))
   check('Every other row is still there', kept.every((r) => liveRow[r.id]))
   check('Every row has a group', after.rows.every((r) => r.category))
 }

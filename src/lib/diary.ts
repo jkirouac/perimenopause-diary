@@ -45,7 +45,6 @@ export const STANDARD_ROWS: StandardRow[] = [
   { key: 'joint_pain', label: 'Joint pain', scale: '0-4', category: 'physical', sort: 50 },
   { key: 'pain_sleep', label: 'Pain affecting sleep', scale: '0-4', category: 'physical', sort: 60 },
   { key: 'vaginal', label: 'Vaginal pain/dryness', scale: '0-4', category: 'physical', sort: 70 },
-  { key: 'acne', label: 'Pimples/acne', scale: '0-4', category: 'physical', sort: 80 },
   { key: 'constipation', label: 'Constipation', scale: '0-4', category: 'physical', sort: 90 },
   { key: 'mucus', label: 'Mucus secretions', scale: '0-4', category: 'physical', sort: 100 },
   { key: 'flush_day', label: 'Hot flushes – day', scale: '0-4', category: 'flushes', sort: 110 },
@@ -63,6 +62,8 @@ export const STANDARD_ROWS: StandardRow[] = [
   { key: 'energy', label: 'Feeling of energy', scale: 'MLUYZ', category: 'compared', sort: 230 },
   { key: 'self_worth', label: 'Feeling of self-worth', scale: 'MLUYZ', category: 'compared', sort: 240 },
   { key: 'stress', label: 'Outside stresses', scale: 'MLUYZ', category: 'compared', sort: 250 },
+  // Replaced Pimples/acne (0–4) on 2026-09-30.
+  { key: 'skin', label: 'Skin clearness', scale: 'MLUYZ', category: 'compared', sort: 260 },
   { key: 'weight', label: 'Weight (lb)', scale: 'number', category: 'measures', sort: 300 },
   { key: 'bp', label: 'Blood pressure', scale: 'bp', category: 'measures', sort: 310 },
 ]
