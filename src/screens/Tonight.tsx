@@ -1,11 +1,22 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { COMPARED, SECTIONS, SEVERITY, noneValue, type DiaryRow } from '../lib/diary'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  COMPARED,
+  SECTIONS,
+  SEVERITY,
+  SEVERITY_LEGEND,
+  bmi,
+  noneValue,
+  parseBp,
+  sectionOf,
+  type DiaryRow,
+} from '../lib/diary'
 import { addDays, isNightNow, longDate, useToday } from '../lib/dates'
+import type { Extra } from '../lib/store'
 import { useEntries } from '../lib/useEntries'
 
-type SetValue = (value: string | null) => void
+type SetValue = (value: string | null, extra?: Extra | null) => void
 
-export function Tonight({ rows }: { rows: DiaryRow[] }) {
+export function Tonight({ rows, heightIn }: { rows: DiaryRow[]; heightIn: number | null }) {
   const t = useToday()
   const y = addDays(t, -1)
   const [which, setWhich] = useState<'today' | 'yesterday'>('today')
@@ -21,7 +32,9 @@ export function Tonight({ rows }: { rows: DiaryRow[] }) {
 
   const visible = rows.filter((r) => !r.hidden)
   const day = entries?.values[date] ?? {}
-  const scored = visible.filter((r) => r.scale !== 'tick' && r.scale !== 'number')
+  const extras = entries?.extras[date] ?? {}
+  // Medications and measurements aren't expected every day, so they don't count here.
+  const scored = visible.filter((r) => noneValue(r.scale) !== null)
   const filled = scored.filter((r) => day[r.id] !== undefined).length
   const left = scored.filter((r) => day[r.id] === undefined && noneValue(r.scale) !== null)
 
@@ -29,7 +42,10 @@ export function Tonight({ rows }: { rows: DiaryRow[] }) {
     for (const r of left) setValue(date, r.id, noneValue(r.scale))
   }
 
-  const flushRow = visible.find((r) => r.key === (isNightNow() ? 'flush_night_n' : 'flush_day_n'))
+  const night = isNightNow()
+  const flushRow = visible.find((r) => r.key === (night ? 'flush_night_n' : 'flush_day_n'))
+  // The severity legend goes above the first severity section on screen.
+  const firstSeverity = SECTIONS.find((s) => s.severity && visible.some((r) => sectionOf(r) === s.id))?.id
 
   return (
     <main className="screen">
@@ -59,7 +75,7 @@ export function Tonight({ rows }: { rows: DiaryRow[] }) {
               <div>
                 <strong>Hot flush just now?</strong>
                 <span className="muted">
-                  Adds one to {flushRow.label.replace('# of flushes – ', '')} flushes · today:{' '}
+                  Adds one to {night ? 'night' : 'day'} flushes · today:{' '}
                   {day[flushRow.id] ?? '–'}
                 </span>
               </div>
@@ -73,16 +89,23 @@ export function Tonight({ rows }: { rows: DiaryRow[] }) {
           )}
 
           {SECTIONS.map((section) => {
-            const sectionRows = visible.filter((r) => section.scales.includes(r.scale))
+            const sectionRows = visible.filter((r) => sectionOf(r) === section.id)
             if (sectionRows.length === 0) return null
+            const legend = section.id === firstSeverity ? SEVERITY_LEGEND : section.legend
             return (
-              <section key={section.title} className="section">
+              <section key={section.id} className="section">
                 <h2>{section.title}</h2>
-                {section.legend && <p className="legend">{section.legend}</p>}
+                {legend && <p className="legend">{legend}</p>}
                 <ul className="rows">
                   {sectionRows.map((r) => (
-                    <li key={r.id}>
-                      <RowInput row={r} value={day[r.id]} set={(v) => setValue(date, r.id, v)} />
+                    <li key={`${date}-${r.id}`}>
+                      <RowInput
+                        row={r}
+                        value={day[r.id]}
+                        extra={extras[r.id]}
+                        heightIn={heightIn}
+                        set={(v, x) => setValue(date, r.id, v, x)}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -108,12 +131,20 @@ export function Tonight({ rows }: { rows: DiaryRow[] }) {
   )
 }
 
-function RowInput({ row, value, set }: { row: DiaryRow; value: string | undefined; set: SetValue }) {
+interface RowProps {
+  row: DiaryRow
+  value: string | undefined
+  extra?: Extra
+  heightIn: number | null
+  set: SetValue
+}
+
+function RowInput({ row, value, extra, heightIn, set }: RowProps) {
   switch (row.scale) {
     case '0-4':
       return (
         <div className="row row-sev">
-          <span className="row-label">{row.label}</span>
+          <span className="row-label">{wrapAtSlash(row.label)}</span>
           <div className="choices" role="group" aria-label={row.label}>
             {SEVERITY.map((s) => (
               <button
@@ -132,7 +163,7 @@ function RowInput({ row, value, set }: { row: DiaryRow; value: string | undefine
     case 'MLUYZ':
       return (
         <div className="row">
-          <span className="row-label">{row.label}</span>
+          <span className="row-label">{wrapAtSlash(row.label)}</span>
           <div className="choices" role="group" aria-label={row.label}>
             {COMPARED.map((c) => (
               <button
@@ -153,7 +184,7 @@ function RowInput({ row, value, set }: { row: DiaryRow; value: string | undefine
       const n = value === undefined ? null : Number(value)
       return (
         <div className="row row-inline">
-          <span className="row-label">{row.label}</span>
+          <span className="row-label">{wrapAtSlash(row.label)}</span>
           <div className="stepper">
             <button aria-label="One fewer" disabled={n === null} onClick={() => set(n && n > 0 ? String(n - 1) : n === 0 ? null : '0')}>
               −
@@ -167,16 +198,15 @@ function RowInput({ row, value, set }: { row: DiaryRow; value: string | undefine
       )
     }
     case 'tick':
-      return (
-        <div className="row row-inline">
-          <span className="row-label">{row.label}</span>
-          <button className="tick" aria-pressed={value === '1'} onClick={() => set(value === '1' ? null : '1')}>
-            {value === '1' ? '✓ Taken' : 'Not taken'}
-          </button>
-        </div>
-      )
+      return <MedInput row={row} value={value} extra={extra} set={set} />
     case 'number':
-      return <NumberInput row={row} value={value} set={set} />
+      return (
+        <NumberInput row={row} value={value} set={set}>
+          {row.key === 'weight' && <Bmi value={value} heightIn={heightIn} />}
+        </NumberInput>
+      )
+    case 'bp':
+      return <BpInput row={row} value={value} extra={extra} set={set} />
   }
 }
 
@@ -205,7 +235,17 @@ function useSaveWhileTyping(text: string, dirty: boolean, commit: () => void) {
   }, [])
 }
 
-function NumberInput({ row, value, set }: { row: DiaryRow; value: string | undefined; set: SetValue }) {
+function NumberInput({
+  row,
+  value,
+  set,
+  children,
+}: {
+  row: DiaryRow
+  value: string | undefined
+  set: SetValue
+  children?: ReactNode
+}) {
   const [text, setText] = useState(value ?? '')
   useEffect(() => setText(value ?? ''), [value])
   const id = `num-${row.id}`
@@ -214,18 +254,140 @@ function NumberInput({ row, value, set }: { row: DiaryRow; value: string | undef
   const commit = () => set(typed === '' ? null : typed)
   useSaveWhileTyping(text, dirty, commit)
   return (
-    <div className="row row-inline">
-      <label className="row-label" htmlFor={id}>
-        {row.label}
+    <div>
+      <div className="row row-inline">
+        <label className="row-label" htmlFor={id}>
+          {wrapAtSlash(row.label)}
+        </label>
+        <input
+          id={id}
+          className="num"
+          inputMode="decimal"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => dirty && commit()}
+        />
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function Bmi({ value, heightIn }: { value: string | undefined; heightIn: number | null }) {
+  const pounds = Number(value)
+  if (!value || !(pounds > 0)) return null
+  return (
+    <p className="muted small row-sub">
+      {heightIn ? `BMI ${bmi(pounds, heightIn)}` : 'Add your height in Settings to see your BMI.'}
+    </p>
+  )
+}
+
+// A medication or supplement: taken or not, with its usual dose and notes shown,
+// and once taken, an optional time and a dose for today if it differs.
+function MedInput({ row, value, extra, set }: Omit<RowProps, 'heightIn'>) {
+  const taken = value === '1'
+  const usual = [row.dose, row.notes].filter(Boolean).join(' · ')
+  return (
+    <div className="med">
+      <div className="row row-inline">
+        <span className="row-label">
+          {wrapAtSlash(row.label)}
+          {usual && <small className="row-sub">{usual}</small>}
+        </span>
+        <button className="tick" aria-pressed={taken} onClick={() => set(taken ? null : '1')}>
+          {taken ? '✓ Taken' : 'Not taken'}
+        </button>
+      </div>
+      {taken && <MedDetails row={row} extra={extra} set={set} />}
+    </div>
+  )
+}
+
+function MedDetails({ row, extra, set }: { row: DiaryRow; extra?: Extra; set: SetValue }) {
+  const [dose, setDose] = useState(extra?.dose ?? '')
+  const dirty = dose.trim() !== (extra?.dose ?? '')
+  const commit = () => set('1', { ...extra, dose })
+  useSaveWhileTyping(dose, dirty, commit)
+  return (
+    <div className="med-details">
+      <label>
+        <span>Time</span>
+        <input
+          type="time"
+          aria-label={`Time you took ${row.label}`}
+          value={extra?.time ?? ''}
+          onChange={(e) => set('1', { ...extra, dose, time: e.target.value })}
+        />
       </label>
-      <input
-        id={id}
-        className="num"
-        inputMode="decimal"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => dirty && commit()}
-      />
+      <label>
+        <span>Dose today, if different</span>
+        <input
+          aria-label={`Dose of ${row.label} today`}
+          value={dose}
+          placeholder={row.dose || 'Usual dose'}
+          onChange={(e) => setDose(e.target.value)}
+          onBlur={() => dirty && commit()}
+        />
+      </label>
+    </div>
+  )
+}
+
+// Blood pressure: the top and bottom numbers, saved together as "120/80", with an optional time.
+function BpInput({ row, value, extra, set }: Omit<RowProps, 'heightIn'>) {
+  const saved = parseBp(value)
+  const [top, setTop] = useState(saved ? String(saved.top) : '')
+  const [bottom, setBottom] = useState(saved ? String(saved.bottom) : '')
+  const [time, setTime] = useState(extra?.time ?? '')
+  const both = top.trim() !== '' && bottom.trim() !== ''
+  const neither = top.trim() === '' && bottom.trim() === ''
+  const typed = both ? `${top.trim()}/${bottom.trim()}` : ''
+  const looksWrong = both && parseBp(typed) === null
+  const ready = (both && !looksWrong) || neither
+  const dirty = ready && (typed !== (value ?? '') || (typed !== '' && time !== (extra?.time ?? '')))
+  const commit = () => set(typed || null, typed ? { time } : null)
+  useSaveWhileTyping(`${top}/${bottom}@${time}`, dirty, commit)
+  const onBlur = () => dirty && commit()
+  return (
+    <div>
+      <div className="row row-inline">
+        <span className="row-label">{wrapAtSlash(row.label)}</span>
+        <div className="bp">
+          <input
+            className="num"
+            inputMode="numeric"
+            aria-label="Top number (systolic)"
+            placeholder="120"
+            value={top}
+            onChange={(e) => setTop(e.target.value.replace(/D/g, ''))}
+            onBlur={onBlur}
+          />
+          <span aria-hidden="true">/</span>
+          <input
+            className="num"
+            inputMode="numeric"
+            aria-label="Bottom number (diastolic)"
+            placeholder="80"
+            value={bottom}
+            onChange={(e) => setBottom(e.target.value.replace(/D/g, ''))}
+            onBlur={onBlur}
+          />
+        </div>
+      </div>
+      <div className="med-details">
+        <label>
+          <span>Time</span>
+          <input
+            type="time"
+            aria-label="Time you measured your blood pressure"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            onBlur={onBlur}
+          />
+        </label>
+      </div>
+      {looksWrong && <p className="error small">Those numbers look off. Blood pressure is written like 120 / 80.</p>}
     </div>
   )
 }
@@ -250,4 +412,19 @@ function Comment({ initial, save }: { initial: string; save: (t: string) => void
       />
     </section>
   )
+}
+
+// Lets names like "Vaginal pain/dryness" wrap after the slash instead of mid-word.
+function wrapAtSlash(label: string): ReactNode {
+  const parts = label.split('/')
+  return parts.map((part, i) => (
+    <Fragment key={i}>
+      {part}
+      {i < parts.length - 1 && (
+        <>
+          /<wbr />
+        </>
+      )}
+    </Fragment>
+  ))
 }

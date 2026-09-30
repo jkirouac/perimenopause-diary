@@ -134,8 +134,8 @@ try {
   }
 
   // Settings: hide a row, add a custom row and a treatment.
-  const fluid = page.locator('.row-edit').filter({ has: page.locator('input[value="Fluid retention"]') })
-  await fluid.getByRole('button', { name: 'Shown' }).click()
+  const constipation = page.locator('.row-edit').filter({ has: page.locator('input[value="Constipation"]') })
+  await constipation.getByRole('button', { name: 'Shown' }).click()
   await page.fill('#add-0-4MLUYZcountnumber', 'Ringing in the ears')
   await page.locator('.add-row').first().getByRole('button', { name: 'Add' }).click()
   await page.fill('#add-tick', 'VitaminD')
@@ -143,10 +143,59 @@ try {
   await page.waitForTimeout(1500)
   await page.click('nav.tabs button:has-text("Tonight")')
   await page.waitForTimeout(800)
-  check('Hidden row leaves Tonight', (await page.locator('.row', { hasText: 'Fluid retention' }).count()) === 0)
+  check('Hidden row leaves Tonight', (await page.locator('.row', { hasText: 'Constipation' }).count()) === 0)
   check('Custom row appears on Tonight', (await page.locator('.row', { hasText: 'Ringing in the ears' }).count()) === 1)
   check('Treatment appears on Tonight', (await page.locator('.row', { hasText: 'VitaminD' }).count()) === 1)
   await page.screenshot({ path: `${out}/10-tonight-after-settings.png`, fullPage: true })
+
+  // Tonight is grouped like her tracker list.
+  const headings = await page.locator('main h2').allTextContents()
+  check(
+    `Tonight has the list's groups (${headings.join(', ')})`,
+    ['Physical', 'Hot flushes', 'Sleep', 'Thinking', 'Mood', 'Compared with usual', 'Medications and supplements', 'Measurements'].every(
+      (h) => headings.includes(h),
+    ),
+  )
+  const labels = await page.locator('.row-label').allTextContents()
+  check(
+    'The merged and new rows are there',
+    ['Breast soreness', 'Joint pain', 'Pain affecting sleep', 'Vaginal pain/dryness', 'Pimples/acne', 'Brain fog',
+      'Irritability / anger / rage', 'Mood swings / emotionally labile', 'Hot flushes / night sweats – night',
+      'Weight (lb)', 'Blood pressure'].every((l) => labels.some((x) => x.startsWith(l))),
+  )
+  check('The old split breast rows are gone', !labels.some((x) => x.startsWith('Breast sore –')))
+
+  const rowId = async (label) =>
+    (await admin.from('diary_rows').select('id').eq('user_id', userId).eq('label', label).single()).data.id
+  const todayEntry = async (label) =>
+    (await admin.from('entries').select('value, extra').eq('user_id', userId).eq('row_id', await rowId(label)).maybeSingle()).data
+
+  // A medication: taken, with a time and a different dose.
+  await page.locator('.med', { hasText: 'VitaminD' }).getByRole('button', { name: 'Not taken' }).click()
+  await page.getByLabel('Time you took VitaminD').fill('08:30')
+  await page.getByLabel('Dose of VitaminD today').fill('2 pumps')
+  await page.waitForTimeout(2500)
+  const med = await todayEntry('VitaminD')
+  check('A medication saves its time and dose', med?.value === '1' && med?.extra?.time === '08:30' && med?.extra?.dose === '2 pumps')
+
+  // Blood pressure.
+  await page.getByLabel('Top number (systolic)').fill('118')
+  await page.getByLabel('Bottom number (diastolic)').fill('76')
+  await page.waitForTimeout(2500)
+  check('Blood pressure saves as top/bottom', (await todayEntry('Blood pressure'))?.value === '118/76')
+
+  // Weight and BMI, once a height is set.
+  await page.click('nav.tabs button:has-text("Settings")')
+  await page.getByLabel('Height, feet').fill('5')
+  await page.getByLabel('Height, inches').fill('6')
+  await page.locator('h1').click()
+  await page.waitForTimeout(1500)
+  await page.click('nav.tabs button:has-text("Tonight")')
+  await page.getByLabel('Weight (lb)').fill('150')
+  await page.waitForTimeout(2500)
+  check('Weight saves', (await todayEntry('Weight (lb)'))?.value === '150')
+  check('BMI is worked out from weight and height (24.2)', (await page.locator('text=BMI 24.2').count()) === 1)
+  await page.screenshot({ path: `${out}/10b-meds-and-measures.png`, fullPage: true })
 
   // Moving a treatment up swaps it with the treatment above, not a row in another section.
   await page.click('nav.tabs button:has-text("Settings")')
@@ -155,10 +204,22 @@ try {
   await page.waitForTimeout(1500)
   await page.getByRole('button', { name: 'Move Magnesium up' }).click()
   await page.waitForTimeout(1500)
-  const treatmentGroup = page.locator('.settings-group', { hasText: 'Treatments and supplements' })
+  const treatmentGroup = page.locator('.settings-group', { hasText: 'Medications and supplements' })
   const treatmentOrder = await treatmentGroup.locator('input[aria-label="Row name"]').evaluateAll((els) => els.map((e) => e.value))
   check(`Move up works inside a section (${treatmentOrder.join(', ')})`, treatmentOrder.join('|') === 'Magnesium|VitaminD')
   check('First row of a section can’t move up', await page.getByRole('button', { name: 'Move Magnesium up' }).isDisabled())
+
+  // Retiring a medication hides it from Tonight but keeps its history.
+  const VitaminD = page.locator('.row-edit').filter({ has: page.locator('input[value="VitaminD"]') })
+  await VitaminD.getByRole('button', { name: 'In use' }).click()
+  await page.waitForTimeout(1500)
+  await page.click('nav.tabs button:has-text("Tonight")')
+  await page.waitForTimeout(800)
+  check('A retired medication leaves Tonight', (await page.locator('.med', { hasText: 'VitaminD' }).count()) === 0)
+  await page.click('nav.tabs button:has-text("Month")')
+  await page.waitForTimeout(1500)
+  const VitaminDRow = page.locator('.month-grid tr', { has: page.locator('th', { hasText: 'VitaminD' }) })
+  check('…and its ticks stay in the month grid', (await VitaminDRow.locator('td', { hasText: '✓' }).count()) === 1)
 
   // Dark mode.
   await page.emulateMedia({ colorScheme: 'dark' })
@@ -181,7 +242,7 @@ try {
     check('Offline support (service worker) is active', sw === true)
   }
   // More than the server's 1,000 rows per request: 94 earlier days of every row.
-  const { data: rowList } = await admin.from('diary_rows').select('id, key').eq('user_id', userId)
+  const { data: rowList } = await admin.from('diary_rows').select('id, key').eq('user_id', userId).eq('scale', '0-4')
   const back = (n) => {
     const d = new Date()
     d.setDate(d.getDate() - n)

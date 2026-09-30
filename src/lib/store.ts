@@ -5,14 +5,33 @@ import { supabase } from './supabase'
 import { STANDARD_ROWS, type DiaryRow } from './diary'
 
 export type DayValues = Record<string, string> // row id -> value
+// Optional details on a value: when a medication was taken and a dose that
+// differs from its usual one, or when a blood pressure was measured.
+export interface Extra {
+  time?: string
+  dose?: string
+}
 export interface Entries {
   values: Record<string, DayValues> // date -> row values
+  extras: Record<string, Record<string, Extra>> // date -> row id -> details
   comments: Record<string, string> // date -> comment
+  // True when the server couldn't be reached and this is only what the phone had saved.
+  fromPhone?: boolean
 }
 
 type Op =
-  | { kind: 'entry'; date: string; rowId: string; value: string | null }
+  | { kind: 'entry'; date: string; rowId: string; value: string | null; extra?: Extra | null }
   | { kind: 'comment'; date: string; text: string }
+
+const EMPTY: Entries = { values: {}, extras: {}, comments: {} }
+
+// Drops empty fields, and returns null when nothing is left.
+export function cleanExtra(extra: Extra | null | undefined): Extra | null {
+  const out: Extra = {}
+  if (extra?.time) out.time = extra.time
+  if (extra?.dose?.trim()) out.dose = extra.dose.trim()
+  return Object.keys(out).length ? out : null
+}
 
 const OUTBOX = 'pd-outbox'
 const CACHE_ROWS = 'pd-rows'
@@ -45,16 +64,16 @@ export function pendingCount(): number {
 
 // ---------- setup ----------
 
+// Adds any standard row this account doesn't have yet: all of them on first
+// sign-in, and rows added to the list since for existing accounts. Rows already
+// there are left alone, so renames and hiding stick.
 export async function ensureSetup(): Promise<void> {
-  const { count, error } = await supabase.from('diary_rows').select('id', { count: 'exact', head: true })
-  if (error) throw error
-  if (count && count > 0) return
-  const rows = STANDARD_ROWS.map((r, i) => ({
+  const rows = STANDARD_ROWS.map((r) => ({
     key: r.key,
     label: r.label,
     scale: r.scale,
-    sort: (i + 1) * 10,
-    hidden: r.hidden ?? false,
+    category: r.category,
+    sort: r.sort,
   }))
   const { error: insertError } = await supabase
     .from('diary_rows')
@@ -68,7 +87,7 @@ export async function ensureSetup(): Promise<void> {
 export async function loadRows(): Promise<DiaryRow[]> {
   const { data, error } = await supabase
     .from('diary_rows')
-    .select('id, key, label, scale, sort, hidden')
+    .select('id, key, label, scale, sort, hidden, category, dose, notes')
     .order('sort')
   if (error) {
     const cached = read<DiaryRow[] | null>(CACHE_ROWS, null)
@@ -79,12 +98,15 @@ export async function loadRows(): Promise<DiaryRow[]> {
   return data as DiaryRow[]
 }
 
-export async function addRow(label: string, scale: DiaryRow['scale'], sort: number) {
-  const { error } = await supabase.from('diary_rows').insert({ label, scale, sort })
+export async function addRow(label: string, scale: DiaryRow['scale'], sort: number, category: string) {
+  const { error } = await supabase.from('diary_rows').insert({ label, scale, sort, category })
   if (error) throw error
 }
 
-export async function updateRow(id: string, patch: Partial<Pick<DiaryRow, 'label' | 'hidden' | 'sort' | 'scale'>>) {
+export async function updateRow(
+  id: string,
+  patch: Partial<Pick<DiaryRow, 'label' | 'hidden' | 'sort' | 'scale' | 'dose' | 'notes'>>,
+) {
   const { error } = await supabase.from('diary_rows').update(patch).eq('id', id)
   if (error) throw error
 }
@@ -98,20 +120,32 @@ export async function deleteRow(id: string) {
 
 function applyOps(entries: Entries, ops: Op[]): Entries {
   const values = { ...entries.values }
+  const extras = { ...(entries.extras ?? {}) }
   const comments = { ...entries.comments }
   for (const op of ops) {
     if (op.kind === 'entry') {
       const day = { ...(values[op.date] ?? {}) }
+      const dayExtras = { ...(extras[op.date] ?? {}) }
+      const extra = op.value === null ? null : cleanExtra(op.extra)
       if (op.value === null) delete day[op.rowId]
       else day[op.rowId] = op.value
+      if (extra) dayExtras[op.rowId] = extra
+      else delete dayExtras[op.rowId]
       values[op.date] = day
+      extras[op.date] = dayExtras
     } else if (op.text.trim()) {
       comments[op.date] = op.text
     } else {
       delete comments[op.date]
     }
   }
-  return { values, comments }
+  return { values, extras, comments }
+}
+
+// A cache saved before extras existed has no extras part.
+function readCache(): Entries {
+  const cache = read<Entries>(CACHE_ENTRIES, EMPTY)
+  return { values: cache.values ?? {}, extras: cache.extras ?? {}, comments: cache.comments ?? {} }
 }
 
 function inRange(date: string, from: string, to: string) {
@@ -136,12 +170,12 @@ async function selectAll<T>(
 }
 
 export async function loadEntries(from: string, to: string): Promise<Entries> {
-  const cache = read<Entries>(CACHE_ENTRIES, { values: {}, comments: {} })
+  const cache = readCache()
   const [e, c] = await Promise.all([
-    selectAll<{ date: string; row_id: string; value: string }>((first, last) =>
+    selectAll<{ date: string; row_id: string; value: string; extra: Extra | null }>((first, last) =>
       supabase
         .from('entries')
-        .select('date, row_id, value')
+        .select('date, row_id, value, extra')
         .gte('date', from)
         .lte('date', to)
         .order('date')
@@ -159,33 +193,37 @@ export async function loadEntries(from: string, to: string): Promise<Entries> {
     ),
   ])
   let fresh: Entries
+  const fromPhone = !e.data || !c.data
   if (!e.data || !c.data) {
     // Offline: fall back to what this phone last saw.
-    fresh = { values: {}, comments: {} }
+    fresh = { values: {}, extras: {}, comments: {} }
     for (const [d, v] of Object.entries(cache.values)) if (inRange(d, from, to)) fresh.values[d] = v
+    for (const [d, x] of Object.entries(cache.extras)) if (inRange(d, from, to)) fresh.extras[d] = x
     for (const [d, t] of Object.entries(cache.comments)) if (inRange(d, from, to)) fresh.comments[d] = t
   } else {
-    fresh = { values: {}, comments: {} }
-    for (const row of e.data) (fresh.values[row.date] ??= {})[row.row_id] = row.value
+    fresh = { values: {}, extras: {}, comments: {} }
+    for (const row of e.data) {
+      ;(fresh.values[row.date] ??= {})[row.row_id] = row.value
+      if (row.extra) (fresh.extras[row.date] ??= {})[row.row_id] = row.extra
+    }
     for (const row of c.data) fresh.comments[row.date] = row.text
     // Refresh the cache for this range.
-    for (const d of Object.keys(cache.values)) if (inRange(d, from, to)) delete cache.values[d]
-    for (const d of Object.keys(cache.comments)) if (inRange(d, from, to)) delete cache.comments[d]
-    Object.assign(cache.values, fresh.values)
-    Object.assign(cache.comments, fresh.comments)
+    for (const part of ['values', 'extras', 'comments'] as const) {
+      for (const d of Object.keys(cache[part])) if (inRange(d, from, to)) delete cache[part][d]
+      Object.assign(cache[part], fresh[part])
+    }
     write(CACHE_ENTRIES, cache)
   }
   // Unsent saves on this phone win over what the server has.
   const pending = read<Op[]>(OUTBOX, []).filter((op) => inRange(op.date, from, to))
-  return applyOps(fresh, pending)
+  return { ...applyOps(fresh, pending), fromPhone }
 }
 
 export function queue(op: Op) {
   const ops = read<Op[]>(OUTBOX, []).filter((o) => opKey(o) !== opKey(op))
   ops.push(op)
   write(OUTBOX, ops)
-  const cache = read<Entries>(CACHE_ENTRIES, { values: {}, comments: {} })
-  write(CACHE_ENTRIES, applyOps(cache, [op]))
+  write(CACHE_ENTRIES, applyOps(readCache(), [op]))
   void flush()
 }
 
@@ -212,7 +250,13 @@ async function doFlush() {
     if (upserts.length) {
       error = (
         await supabase.from('entries').upsert(
-          upserts.map((o) => ({ date: o.date, row_id: o.rowId, value: o.value, entered_at: now })),
+          upserts.map((o) => ({
+            date: o.date,
+            row_id: o.rowId,
+            value: o.value,
+            extra: cleanExtra(o.extra),
+            entered_at: now,
+          })),
           { onConflict: 'user_id,date,row_id' },
         )
       ).error
@@ -253,13 +297,23 @@ async function doFlush() {
 
 // ---------- profile and feedback ----------
 
-export async function loadName(): Promise<string> {
-  const { data } = await supabase.from('profiles').select('display_name').maybeSingle()
-  return data?.display_name ?? ''
+export interface Profile {
+  name: string
+  heightIn: number | null // height in inches, for BMI
+}
+
+export async function loadProfile(): Promise<Profile> {
+  const { data } = await supabase.from('profiles').select('display_name, height_in').maybeSingle()
+  return { name: data?.display_name ?? '', heightIn: data?.height_in == null ? null : Number(data.height_in) }
 }
 
 export async function saveName(name: string) {
   const { error } = await supabase.from('profiles').upsert({ display_name: name }, { onConflict: 'user_id' })
+  if (error) throw error
+}
+
+export async function saveHeight(heightIn: number | null) {
+  const { error } = await supabase.from('profiles').upsert({ height_in: heightIn }, { onConflict: 'user_id' })
   if (error) throw error
 }
 

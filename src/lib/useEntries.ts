@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { loadEntries, queue, type Entries } from './store'
+import { cleanExtra, loadEntries, queue, type Entries, type Extra } from './store'
 
 export function useEntries(from: string, to: string) {
   const [entries, setEntries] = useState<Entries | null>(null)
@@ -19,15 +19,23 @@ export function useEntries(from: string, to: string) {
     reload()
   }, [reload])
 
-  const setValue = useCallback((date: string, rowId: string, value: string | null) => {
+  const setValue = useCallback((date: string, rowId: string, value: string | null, extra?: Extra | null) => {
+    const kept = value === null ? null : cleanExtra(extra)
     setEntries((prev) => {
       if (!prev) return prev
       const day = { ...(prev.values[date] ?? {}) }
+      const dayExtras = { ...(prev.extras[date] ?? {}) }
       if (value === null) delete day[rowId]
       else day[rowId] = value
-      return { ...prev, values: { ...prev.values, [date]: day } }
+      if (kept) dayExtras[rowId] = kept
+      else delete dayExtras[rowId]
+      return {
+        ...prev,
+        values: { ...prev.values, [date]: day },
+        extras: { ...prev.extras, [date]: dayExtras },
+      }
     })
-    queue({ kind: 'entry', date, rowId, value })
+    queue({ kind: 'entry', date, rowId, value, extra: kept })
   }, [])
 
   const setComment = useCallback((date: string, text: string) => {

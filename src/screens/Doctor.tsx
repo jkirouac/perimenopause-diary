@@ -37,7 +37,7 @@ export function Doctor({ rows, name }: { rows: DiaryRow[]; name: string }) {
           <p className="sheet-legend">
             <strong>Strength:</strong> {SEVERITY.map((s) => `${s.value} ${s.word}`).join(', ')}.{' '}
             <strong>Compared with usual:</strong> {COMPARED.map((c) => `${c.value} ${c.word}`).join(', ')}.{' '}
-            <strong>Blank:</strong> not recorded. <strong>✓</strong> taken.
+            <strong>Blank:</strong> not recorded. <strong>✓</strong> taken. <strong>Blood pressure:</strong> top/bottom number.
           </p>
           <h3>Comments</h3>
           <CommentList entries={entries} days={days} />

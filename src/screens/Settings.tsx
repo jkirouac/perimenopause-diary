@@ -1,5 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { CREDIT, SCALE_NAMES, SECTIONS, type DiaryRow, type Scale } from '../lib/diary'
+import {
+  CREDIT,
+  SCALE_NAMES,
+  SECTIONS,
+  SYMPTOM_GROUPS,
+  sectionOf,
+  sectionTitle,
+  type Category,
+  type DiaryRow,
+  type Scale,
+} from '../lib/diary'
 import { today } from '../lib/dates'
 import {
   addRow,
@@ -8,21 +18,25 @@ import {
   flush,
   loadEntries,
   pendingCount,
+  saveHeight,
   saveName,
   sendFeedback,
   updateRow,
+  type Extra,
 } from '../lib/store'
 import { supabase } from '../lib/supabase'
 
 interface Props {
   rows: DiaryRow[]
   name: string
+  heightIn: number | null
   email: string
   onRowsChanged: () => void
   onNameChanged: (name: string) => void
+  onHeightChanged: (heightIn: number | null) => void
 }
 
-export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Props) {
+export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameChanged, onHeightChanged }: Props) {
   const [error, setError] = useState('')
 
   async function run(action: () => Promise<void>) {
@@ -57,6 +71,7 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
       {error && <p className="error" role="alert">{error}</p>}
 
       <NameField name={name} onSaved={onNameChanged} />
+      <HeightField heightIn={heightIn} onSaved={onHeightChanged} />
 
       <section className="section">
         <h2>What you track</h2>
@@ -64,10 +79,10 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
           Hide rows you don't track, rename them, or move them. Hidden rows keep anything already recorded.
         </p>
         {SECTIONS.map((s) => {
-          const list = rows.filter((r) => s.scales.includes(r.scale))
+          const list = rows.filter((r) => sectionOf(r) === s.id)
           if (list.length === 0) return null
           return (
-            <div key={s.title} className="settings-group">
+            <div key={s.id} className="settings-group">
               <h3>{s.title}</h3>
               <ul className="rows">
                 {list.map((r) => (
@@ -80,6 +95,9 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
                       onToggle={() => run(() => updateRow(r.id, { hidden: !r.hidden }))}
                       onMove={(dir) => move(list, r, dir)}
                       onDelete={() => run(() => deleteRow(r.id))}
+                      onDetails={
+                        r.scale === 'tick' ? (patch) => run(() => updateRow(r.id, patch)) : undefined
+                      }
                     />
                   </li>
                 ))}
@@ -90,12 +108,13 @@ export function Settings({ rows, name, email, onRowsChanged, onNameChanged }: Pr
         <AddRow
           title="Add a symptom or feeling"
           scales={['0-4', 'MLUYZ', 'count', 'number']}
-          onAdd={(label, scale) => run(() => addRow(label, scale, nextSort))}
+          groups={SYMPTOM_GROUPS}
+          onAdd={(label, scale, category) => run(() => addRow(label, scale, nextSort, category))}
         />
         <AddRow
-          title="Add a treatment or supplement"
+          title="Add a medication or supplement"
           scales={['tick']}
-          onAdd={(label, scale) => run(() => addRow(label, scale, nextSort))}
+          onAdd={(label, scale) => run(() => addRow(label, scale, nextSort, 'meds'))}
         />
       </section>
 
@@ -187,6 +206,67 @@ function NameField({ name, onSaved }: { name: string; onSaved: (n: string) => vo
   )
 }
 
+// Height in feet and inches, stored as inches. Used only to work out BMI.
+function HeightField({ heightIn, onSaved }: { heightIn: number | null; onSaved: (h: number | null) => void }) {
+  const split = (h: number | null) =>
+    h ? [String(Math.floor(h / 12)), String(Math.round((h % 12) * 10) / 10)] : ['', '']
+  const [feet, setFeet] = useState(split(heightIn)[0])
+  const [inches, setInches] = useState(split(heightIn)[1])
+  const [status, setStatus] = useState('')
+  useEffect(() => {
+    const [f, i] = split(heightIn)
+    setFeet(f)
+    setInches(i)
+  }, [heightIn])
+  async function save() {
+    const blank = feet.trim() === '' && inches.trim() === ''
+    const total = blank ? null : Number(feet || 0) * 12 + Number((inches || '0').replace(',', '.'))
+    if (total === heightIn) return
+    if (total !== null && !(total >= 36 && total <= 96)) {
+      setStatus('That height looks off. Enter feet and inches, like 5 ft 6 in.')
+      return
+    }
+    try {
+      await saveHeight(total)
+      onSaved(total)
+      setStatus('Saved')
+    } catch {
+      setStatus("Couldn't save your height. Try again when you're online.")
+    }
+  }
+  return (
+    <section className="section">
+      <h2>Your height</h2>
+      <p className="legend">Used to work out your BMI from your weight.</p>
+      <div className="height">
+        <label>
+          <input
+            className="num"
+            inputMode="numeric"
+            aria-label="Height, feet"
+            value={feet}
+            onChange={(e) => setFeet(e.target.value.replace(/\D/g, ''))}
+            onBlur={save}
+          />{' '}
+          ft
+        </label>
+        <label>
+          <input
+            className="num"
+            inputMode="decimal"
+            aria-label="Height, inches"
+            value={inches}
+            onChange={(e) => setInches(e.target.value)}
+            onBlur={save}
+          />{' '}
+          in
+        </label>
+      </div>
+      {status && <p className="muted small">{status}</p>}
+    </section>
+  )
+}
+
 function RowEditor({
   row,
   isFirst,
@@ -195,6 +275,7 @@ function RowEditor({
   onToggle,
   onMove,
   onDelete,
+  onDetails,
 }: {
   row: DiaryRow
   isFirst: boolean
@@ -203,6 +284,8 @@ function RowEditor({
   onToggle: () => void
   onMove: (dir: -1 | 1) => void
   onDelete: () => void
+  // Medications only: saves the usual dose and notes.
+  onDetails?: (patch: { dose?: string; notes?: string }) => void
 }) {
   const [label, setLabel] = useState(row.label)
   const [confirming, setConfirming] = useState(false)
@@ -219,7 +302,7 @@ function RowEditor({
       />
       <div className="row-edit-actions">
         <button onClick={onToggle} aria-pressed={!row.hidden}>
-          {row.hidden ? 'Hidden' : 'Shown'}
+          {onDetails ? (row.hidden ? 'Retired' : 'In use') : row.hidden ? 'Hidden' : 'Shown'}
         </button>
         <button onClick={() => onMove(-1)} disabled={isFirst} aria-label={`Move ${row.label} up`}>
           ↑
@@ -241,6 +324,43 @@ function RowEditor({
             </button>
           ))}
       </div>
+      {onDetails && <MedDetailsEditor row={row} onSave={onDetails} />}
+    </div>
+  )
+}
+
+function MedDetailsEditor({
+  row,
+  onSave,
+}: {
+  row: DiaryRow
+  onSave: (patch: { dose?: string; notes?: string }) => void
+}) {
+  const [dose, setDose] = useState(row.dose)
+  const [notes, setNotes] = useState(row.notes)
+  useEffect(() => setDose(row.dose), [row.dose])
+  useEffect(() => setNotes(row.notes), [row.notes])
+  return (
+    <div className="med-details">
+      <label>
+        <span>Usual dose</span>
+        <input
+          aria-label={`Usual dose of ${row.label}`}
+          value={dose}
+          placeholder="e.g. 1 pump"
+          onChange={(e) => setDose(e.target.value)}
+          onBlur={() => dose.trim() !== row.dose && onSave({ dose: dose.trim() })}
+        />
+      </label>
+      <label>
+        <span>Notes</span>
+        <input
+          aria-label={`Notes for ${row.label}`}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          onBlur={() => notes.trim() !== row.notes && onSave({ notes: notes.trim() })}
+        />
+      </label>
     </div>
   )
 }
@@ -248,19 +368,24 @@ function RowEditor({
 function AddRow({
   title,
   scales,
+  groups,
   onAdd,
 }: {
   title: string
   scales: Scale[]
-  onAdd: (label: string, scale: Scale) => void
+  groups?: Category[]
+  onAdd: (label: string, scale: Scale, category: Category) => void
 }) {
   const [label, setLabel] = useState('')
   const [scale, setScale] = useState<Scale>(scales[0])
+  const [group, setGroup] = useState<Category>(groups?.[0] ?? 'other')
+  // Only strength and count rows go in a symptom group; the others have their own section.
+  const choosesGroup = !!groups && (scale === '0-4' || scale === 'count')
   const id = `add-${scales.join('')}`
   function submit(e: FormEvent) {
     e.preventDefault()
     if (!label.trim()) return
-    onAdd(label.trim(), scale)
+    onAdd(label.trim(), scale, choosesGroup ? group : sectionOf({ scale, category: null }))
     setLabel('')
   }
   return (
@@ -277,10 +402,28 @@ function AddRow({
             ))}
           </select>
         )}
+        {choosesGroup && (
+          <select aria-label="Group" value={group} onChange={(e) => setGroup(e.target.value as Category)}>
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {sectionTitle(g)}
+              </option>
+            ))}
+          </select>
+        )}
         <button className="primary">Add</button>
       </div>
     </form>
   )
+}
+
+// A medication shows as "taken", with its time and that day's dose if recorded;
+// blood pressure keeps its time.
+function cell(row: DiaryRow, value: string | undefined, extra: Extra | undefined) {
+  if (value === undefined) return ''
+  const detail = [extra?.time, extra?.dose].filter(Boolean).join(', ')
+  const shown = row.scale === 'tick' ? 'taken' : value
+  return detail ? `${shown} (${detail})` : shown
 }
 
 function ExportButton({ rows }: { rows: DiaryRow[] }) {
@@ -288,13 +431,15 @@ function ExportButton({ rows }: { rows: DiaryRow[] }) {
   async function exportCsv() {
     setStatus('Preparing…')
     try {
-      const { values, comments } = await loadEntries('2000-01-01', today())
+      const { values, extras, comments, fromPhone } = await loadEntries('2000-01-01', today())
       const dates = [...new Set([...Object.keys(values), ...Object.keys(comments)])].sort()
       const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
       const lines = [
         ['Date', ...rows.map((r) => r.label), 'Comments'].map(esc).join(','),
         ...dates.map((d) =>
-          [d, ...rows.map((r) => values[d]?.[r.id] ?? ''), comments[d] ?? ''].map(esc).join(','),
+          [d, ...rows.map((r) => cell(r, values[d]?.[r.id], extras[d]?.[r.id])), comments[d] ?? '']
+            .map(esc)
+            .join(','),
         ),
       ]
       const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv' })
@@ -303,7 +448,11 @@ function ExportButton({ rows }: { rows: DiaryRow[] }) {
       a.download = `perimenopause-diary-${today()}.csv`
       a.click()
       URL.revokeObjectURL(a.href)
-      setStatus(`Downloaded ${dates.length} days.`)
+      setStatus(
+        fromPhone
+          ? `Downloaded ${dates.length} days. You're offline, so this file may be missing some days. Try again with internet for the full diary.`
+          : `Downloaded ${dates.length} days.`,
+      )
     } catch {
       setStatus("Couldn't prepare the file. Try again when you're online.")
     }

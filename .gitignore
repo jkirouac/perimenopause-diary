@@ -26,3 +26,6 @@ dist-ssr
 # Supabase CLI working files
 supabase/.temp/
 supabase/.branches/
+
+# Local account backups (health data; never commit)
+backups/

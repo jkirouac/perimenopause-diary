@@ -351,6 +351,8 @@ a {
 .row-label {
   font-weight: 500;
   min-width: 0;
+  /* Last resort for a long word; names with a slash wrap after it (wrapAtSlash). */
+  overflow-wrap: break-word;
 }
 
 /* 0–4 rows: label beside the buttons to keep the evening list short. */
@@ -442,6 +444,64 @@ a {
 .num {
   width: 7rem;
   text-align: right;
+}
+
+/* Medications, blood pressure and height: small labelled fields under a row. */
+.row-sub {
+  display: block;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+p.row-sub {
+  margin: -6px 14px 10px;
+}
+
+.med-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding: 0 14px 12px;
+}
+
+.med-details label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.med-details input {
+  min-width: 8rem;
+}
+
+.row-edit .med-details {
+  padding: 8px 0 0;
+}
+
+.bp,
+.height {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bp .num {
+  width: 4.5rem;
+}
+
+.height {
+  gap: 16px;
+}
+
+.height .num {
+  width: 4.5rem;
+}
+
+.month-grid td.bp-cell {
+  font-size: 0.7rem;
+  white-space: nowrap;
 }
 
 /* ---------- month grid ---------- */

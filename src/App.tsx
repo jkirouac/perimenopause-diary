@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
-import { ensureSetup, flush, loadName, loadRows, pendingCount } from './lib/store'
+import { ensureSetup, flush, loadProfile, loadRows, pendingCount } from './lib/store'
 import type { DiaryRow } from './lib/diary'
 import { SignIn } from './screens/SignIn'
 import { Tonight } from './screens/Tonight'
@@ -42,6 +42,7 @@ function Diary({ email }: { email: string }) {
   const [tab, setTab] = useState<Tab>(tabFromHash)
   const [rows, setRows] = useState<DiaryRow[] | null>(null)
   const [name, setName] = useState('')
+  const [heightIn, setHeightIn] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [pending, setPending] = useState(pendingCount())
 
@@ -55,7 +56,12 @@ function Diary({ email }: { email: string }) {
     ensureSetup()
       .catch(() => undefined) // Offline on a later visit: cached rows still load.
       .finally(reloadRows)
-    loadName().then(setName).catch(() => undefined)
+    loadProfile()
+      .then((p) => {
+        setName(p.name)
+        setHeightIn(p.heightIn)
+      })
+      .catch(() => undefined)
   }, [reloadRows])
 
   // Send saves made offline once the connection is back, and keep the count current.
@@ -100,15 +106,23 @@ function Diary({ email }: { email: string }) {
       {error && <p className="error" role="alert">{error}</p>}
       {rows &&
         (tab === 'tonight' ? (
-          <Tonight rows={rows} />
+          <Tonight rows={rows} heightIn={heightIn} />
         ) : tab === 'month' ? (
           <Month rows={rows} />
         ) : tab === 'trends' ? (
-          <Trends rows={rows} />
+          <Trends rows={rows} heightIn={heightIn} />
         ) : tab === 'doctor' ? (
           <Doctor rows={rows} name={name} />
         ) : (
-          <Settings rows={rows} name={name} email={email} onRowsChanged={reloadRows} onNameChanged={setName} />
+          <Settings
+            rows={rows}
+            name={name}
+            heightIn={heightIn}
+            email={email}
+            onRowsChanged={reloadRows}
+            onNameChanged={setName}
+            onHeightChanged={setHeightIn}
+          />
         ))}
       {!rows && !error && <p className="muted center">Loading…</p>}
       <nav className="tabs no-print" aria-label="Main">

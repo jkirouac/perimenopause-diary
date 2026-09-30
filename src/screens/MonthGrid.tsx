@@ -1,4 +1,4 @@
-import { SECTIONS, type DiaryRow } from '../lib/diary'
+import { SECTIONS, sectionOf, type DiaryRow } from '../lib/diary'
 import { daysInMonth, isoDay } from '../lib/dates'
 import type { Entries } from '../lib/store'
 
@@ -20,11 +20,9 @@ export function MonthGrid({
   // Grouped by section like Tonight, keeping each section's own order.
   const shown = SECTIONS.flatMap((s) =>
     rows.filter(
-      (r) =>
-        s.scales.includes(r.scale) && (!r.hidden || days.some((d) => entries.values[d]?.[r.id] !== undefined)),
+      (r) => sectionOf(r) === s.id && (!r.hidden || days.some((d) => entries.values[d]?.[r.id] !== undefined)),
     ),
   )
-  const sectionOf = (r: DiaryRow) => SECTIONS.findIndex((s) => s.scales.includes(r.scale))
 
   return (
     <div className="grid-scroll">
@@ -48,7 +46,7 @@ export function MonthGrid({
               {days.map((d) => {
                 const v = entries.values[d]?.[r.id]
                 return (
-                  <td key={d} className={cellClass(r, v)}>
+                  <td key={d} className={cellClass(r, v)} title={detail(entries.extras[d]?.[r.id])}>
                     {v === undefined ? '' : r.scale === 'tick' ? '✓' : v}
                   </td>
                 )
@@ -69,11 +67,16 @@ export function MonthGrid({
   )
 }
 
+function detail(extra: { time?: string; dose?: string } | undefined) {
+  return [extra?.time, extra?.dose].filter(Boolean).join(', ') || undefined
+}
+
 function cellClass(r: DiaryRow, v: string | undefined) {
   if (v === undefined) return 'blank'
   if (r.scale === '0-4') return `sev-${v}`
   if (r.scale === 'MLUYZ') return `cmp-${v}`
   if (r.scale === 'tick') return 'ticked'
+  if (r.scale === 'bp') return 'bp-cell'
   return ''
 }
 
