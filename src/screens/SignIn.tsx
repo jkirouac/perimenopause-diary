@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { CREDIT } from '../lib/diary'
 import { InstallCard } from './Install'
+import { useTurnstile } from '../lib/turnstile'
 
 export function SignIn({ onAbout }: { onAbout?: () => void }) {
   const [email, setEmail] = useState('')
@@ -9,18 +10,25 @@ export function SignIn({ onAbout }: { onAbout?: () => void }) {
   const [step, setStep] = useState<'email' | 'code'>('email')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const robotCheck = useTurnstile()
 
   async function sendCode(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim() })
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: robotCheck.token ? { captchaToken: robotCheck.token } : undefined,
+    })
     setBusy(false)
+    robotCheck.reset() // Each check can be used once.
     if (error) {
       setError(
         error.status === 429
-          ? 'Too many sign-in emails were sent in the last hour. Wait a little and try again.'
-          : `Couldn't send the code: ${error.message}`,
+          ? 'Too many codes were asked for just now. Wait a minute, then try again.'
+          : /captcha/i.test(error.message)
+            ? 'The quick “not a robot” check didn’t finish. Wait a moment and try again.'
+            : `Couldn't send the code: ${error.message}`,
       )
       return
     }
@@ -59,6 +67,8 @@ export function SignIn({ onAbout }: { onAbout?: () => void }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+          {/* Usually invisible; appears only if Cloudflare needs a tap to confirm. */}
+          {robotCheck.enabled && <div ref={robotCheck.ref} className="robot-check" />}
           <button className="primary" disabled={busy}>
             {busy ? 'Sending…' : 'Email me a sign-in code'}
           </button>
@@ -66,8 +76,8 @@ export function SignIn({ onAbout }: { onAbout?: () => void }) {
       ) : (
         <form onSubmit={verify} className="stack">
           <p>
-            We sent a code to <strong>{email}</strong>. Type it here. It can take a minute to arrive; check spam if
-            it doesn't.
+            We sent a code to <strong>{email}</strong>. Type it here within ten minutes. It can take a minute to
+            arrive; check spam if it doesn't.
           </p>
           <label htmlFor="code">Code</label>
           <input

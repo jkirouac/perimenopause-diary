@@ -210,10 +210,12 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# [auth.captcha]
-# enabled = true
-# provider = "hcaptcha"
-# secret = ""
+# A "not a robot" check (Cloudflare Turnstile) before a sign-in code is sent, so nobody
+# can use the app to spam addresses or use up the 30-an-hour email quota.
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(TURNSTILE_SECRET)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
@@ -226,11 +228,13 @@ enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+# At most one code per address per minute.
+max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# Codes work for ten minutes.
+otp_expiry = 600
 
 # Sign-in codes go out through Resend, borrowing the packed.camp domain (verified
 # there; Resend's free tier allows one domain). Resend sees only the address and the

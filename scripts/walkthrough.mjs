@@ -30,6 +30,9 @@ try {
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
+  // The published build carries a Content-Security-Policy; nothing the app needs may trip it.
+  const policyBlocks = []
+  page.on('console', (m) => /Content Security Policy|Content-Security-Policy/i.test(m.text()) && policyBlocks.push(m.text()))
   // Don't send a real email; the code comes from the admin API instead.
   await page.route('**/auth/v1/otp**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
 
@@ -148,14 +151,14 @@ try {
   await constipation.getByRole('button', { name: 'Shown' }).click()
   await page.fill('#add-0-4MLUYZcountnumber', 'Ringing in the ears')
   await page.locator('.add-row').first().getByRole('button', { name: 'Add' }).click()
-  await page.fill('#add-tick', 'VitaminD')
+  await page.fill('#add-tick', 'Vitamin D')
   await page.locator('.add-row').nth(1).getByRole('button', { name: 'Add' }).click()
   await page.waitForTimeout(1500)
   await page.click('nav.tabs button:has-text("Tonight")')
   await page.waitForTimeout(800)
   check('Hidden row leaves Tonight', (await page.locator('.row', { hasText: 'Constipation' }).count()) === 0)
   check('Custom row appears on Tonight', (await page.locator('.row', { hasText: 'Ringing in the ears' }).count()) === 1)
-  check('Treatment appears on Tonight', (await page.locator('.row', { hasText: 'VitaminD' }).count()) === 1)
+  check('Treatment appears on Tonight', (await page.locator('.row', { hasText: 'Vitamin D' }).count()) === 1)
   await page.screenshot({ path: `${out}/10-tonight-after-settings.png`, fullPage: true })
 
   // Tonight is grouped like her tracker list.
@@ -182,11 +185,11 @@ try {
     (await admin.from('entries').select('value, extra').eq('user_id', userId).eq('row_id', await rowId(label)).maybeSingle()).data
 
   // A medication: taken, with a time and a different dose.
-  await page.locator('.med', { hasText: 'VitaminD' }).getByRole('button', { name: 'Not taken' }).click()
-  await page.getByLabel('Time you took VitaminD').fill('08:30')
-  await page.getByLabel('Dose of VitaminD today').fill('2 pumps')
+  await page.locator('.med', { hasText: 'Vitamin D' }).getByRole('button', { name: 'Not taken' }).click()
+  await page.getByLabel('Time you took Vitamin D').fill('08:30')
+  await page.getByLabel('Dose of Vitamin D today').fill('2 pumps')
   await page.waitForTimeout(2500)
-  const med = await todayEntry('VitaminD')
+  const med = await todayEntry('Vitamin D')
   check('A medication saves its time and dose', med?.value === '1' && med?.extra?.time === '08:30' && med?.extra?.dose === '2 pumps')
 
   // Blood pressure.
@@ -217,20 +220,20 @@ try {
   await page.waitForTimeout(1500)
   const treatmentGroup = page.locator('.settings-group', { hasText: 'Medications and supplements' })
   const treatmentOrder = await treatmentGroup.locator('input[aria-label="Row name"]').evaluateAll((els) => els.map((e) => e.value))
-  check(`Move up works inside a section (${treatmentOrder.join(', ')})`, treatmentOrder.join('|') === 'Magnesium|VitaminD')
+  check(`Move up works inside a section (${treatmentOrder.join(', ')})`, treatmentOrder.join('|') === 'Magnesium|Vitamin D')
   check('First row of a section can’t move up', await page.getByRole('button', { name: 'Move Magnesium up' }).isDisabled())
 
   // Retiring a medication hides it from Tonight but keeps its history.
-  const VitaminD = page.locator('.row-edit').filter({ has: page.locator('input[value="VitaminD"]') })
-  await VitaminD.getByRole('button', { name: 'In use' }).click()
+  const vitaminD = page.locator('.row-edit').filter({ has: page.locator('input[value="Vitamin D"]') })
+  await vitaminD.getByRole('button', { name: 'In use' }).click()
   await page.waitForTimeout(1500)
   await page.click('nav.tabs button:has-text("Tonight")')
   await page.waitForTimeout(800)
-  check('A retired medication leaves Tonight', (await page.locator('.med', { hasText: 'VitaminD' }).count()) === 0)
+  check('A retired medication leaves Tonight', (await page.locator('.med', { hasText: 'Vitamin D' }).count()) === 0)
   await page.click('nav.tabs button:has-text("Month")')
   await page.waitForTimeout(1500)
-  const VitaminDRow = page.locator('.month-grid tr', { has: page.locator('th', { hasText: 'VitaminD' }) })
-  check('…and its ticks stay in the month grid', (await VitaminDRow.locator('td', { hasText: '✓' }).count()) === 1)
+  const vitaminDRow = page.locator('.month-grid tr', { has: page.locator('th', { hasText: 'Vitamin D' }) })
+  check('…and its ticks stay in the month grid', (await vitaminDRow.locator('td', { hasText: '✓' }).count()) === 1)
 
   // Light by default, even on a phone set to dark; Dark only when chosen.
   const pageBg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
@@ -453,6 +456,8 @@ try {
   check('…and signs out', (await del.locator('.rows').count()) === 0)
   await deleting.close()
 
+  check('Nothing blocked by the security policy', policyBlocks.length === 0)
+  if (policyBlocks.length) console.log(policyBlocks.slice(0, 5))
   check('No script errors on any screen', errors.length === 0)
   if (errors.length) console.log(errors)
 } finally {

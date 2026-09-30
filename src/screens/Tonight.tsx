@@ -271,6 +271,7 @@ function NumberInput({
           id={id}
           className="num"
           inputMode="decimal"
+          maxLength={12}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onBlur={() => dirty && commit()}
@@ -332,6 +333,7 @@ function MedDetails({ row, extra, set }: { row: DiaryRow; extra?: Extra; set: Se
         <span>Dose today, if different</span>
         <input
           aria-label={`Dose of ${row.label} today`}
+          maxLength={80}
           value={dose}
           placeholder={row.dose || 'Usual dose'}
           onChange={(e) => setDose(e.target.value)}
@@ -413,6 +415,7 @@ function Comment({ initial, save }: { initial: string; save: (t: string) => void
       <p className="legend">Anything that shaped the day: illness, an argument, good news, a late night.</p>
       <textarea
         id="comment"
+        maxLength={2000}
         rows={3}
         value={text}
         onChange={(e) => setText(e.target.value)}

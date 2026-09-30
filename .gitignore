@@ -32,3 +32,6 @@ backups/
 
 # Local design screenshots for review
 design-previews/
+
+# Real diary data used by one-off loaders; never commit
+scripts/private/

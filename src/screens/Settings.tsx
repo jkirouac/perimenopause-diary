@@ -234,6 +234,7 @@ function NameField({ name, onSaved }: { name: string; onSaved: (n: string) => vo
       <p className="legend">Shown at the top of the copy for your care team.</p>
       <input
         id="name"
+        maxLength={80}
         value={text}
         onChange={(e) => setText(e.target.value)}
         onBlur={async () => {
@@ -372,6 +373,7 @@ function RowEditor({
       <input
         id={id}
         aria-label="Row name"
+        maxLength={80}
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         onBlur={() => label.trim() && label !== row.label && onRename(label.trim())}
@@ -422,6 +424,7 @@ function MedDetailsEditor({
         <span>Usual dose</span>
         <input
           aria-label={`Usual dose of ${row.label}`}
+          maxLength={80}
           value={dose}
           placeholder="e.g. 1 pump"
           onChange={(e) => setDose(e.target.value)}
@@ -432,6 +435,7 @@ function MedDetailsEditor({
         <span>Notes</span>
         <input
           aria-label={`Notes for ${row.label}`}
+          maxLength={300}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           onBlur={() => notes.trim() !== row.notes && onSave({ notes: notes.trim() })}
@@ -468,7 +472,7 @@ function AddRow({
     <form className="add-row" onSubmit={submit}>
       <label htmlFor={id}>{title}</label>
       <div className="add-row-fields">
-        <input id={id} value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" />
+        <input id={id} value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} placeholder="Name" />
         {scales.length > 1 && (
           <select aria-label="Scale" value={scale} onChange={(e) => setScale(e.target.value as Scale)}>
             {scales.map((s) => (
@@ -562,7 +566,7 @@ function Feedback() {
       </h2>
       <p className="legend">What's confusing, missing, or annoying? Goes straight to Jeremy.</p>
       <form onSubmit={submit} className="stack">
-        <textarea id="feedback" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+        <textarea id="feedback" rows={3} maxLength={5000} value={text} onChange={(e) => setText(e.target.value)} />
         <button className="primary">Send</button>
       </form>
       {status && <p className="muted small">{status}</p>}

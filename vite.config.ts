@@ -1,14 +1,54 @@
+import { createHash } from 'node:crypto'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // Served from GitHub Pages at /perimenopause-diary/.
 const base = '/perimenopause-diary/'
 
+// GitHub Pages can't send security headers, so the built page carries its own
+// Content-Security-Policy: only our own scripts (plus the inline theme script, by hash,
+// and Cloudflare's "not a robot" check), and connections only to Supabase. Added at
+// build time only, because the dev server injects scripts of its own.
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: 'content-security-policy',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+          (m) => `'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`,
+        )
+        const policy = [
+          "default-src 'self'",
+          `script-src 'self' ${inline.join(' ')} https://challenges.cloudflare.com`,
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: blob:",
+          "font-src 'self' data:",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com",
+          'frame-src https://challenges.cloudflare.com',
+          "worker-src 'self'",
+          "manifest-src 'self'",
+          "object-src 'none'",
+          "base-uri 'self'",
+          "form-action 'self'",
+        ].join('; ')
+        return html.replace(
+          '<meta charset="UTF-8" />',
+          `<meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="${policy}" />`,
+        )
+      },
+    },
+  }
+}
+
 export default defineConfig({
   base,
   plugins: [
     react(),
+    contentSecurityPolicy(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],

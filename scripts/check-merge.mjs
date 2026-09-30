@@ -174,14 +174,25 @@ if (mode === 'verify-test') {
       (d) => entries.find((e) => e.row_id === r?.id && e.date === `2026-09-${d}`)?.value ?? '-',
     )
   }
-  check(`Breast soreness keeps the higher value (${series('breast').join(' ')})`, series('breast').join('') === '*******-')
-  check('Pain affecting sleep carries the back pain values', series('pain_sleep').join('') === '********')
-  check('Brain fog carries the memory values', series('brain_fog').join('') === '*******-')
+  // Expected values come from the private September file (never from this public repo),
+  // with prepare-test's deliberate breast changes applied on top.
+  const september = JSON.parse(fs.readFileSync(new URL('./private/first-user-september.json', import.meta.url), 'utf8'))
+  const asText = (values) => values.map((v) => (v === null ? '-' : String(v))).join('')
+  const front = [...september.breast_front]
+  const side = [...september.breast_side]
+  side[1] = 3
+  front[2] = 2
+  side[2] = 1
+  side[6] = 2
+  const breast = front.map((f, i) => (f === null && side[i] === null ? null : Math.max(f ?? -1, side[i] ?? -1)))
+  check('Breast soreness keeps the higher value', series('breast').join('') === asText(breast))
+  check('Pain affecting sleep carries the back pain values', series('pain_sleep').join('') === asText(september.custom_lbp))
+  check('Brain fog carries the memory values', series('brain_fog').join('') === asText(september.custom_memory))
   check('Irritability relabelled', row('frustrated')?.label === 'Irritability / anger / rage')
   check('Night sweats in the night flush label', row('flush_night')?.label === 'Hot flushes / night sweats – night')
   check('Fluid retention kept hidden because it has a value', row('fluid')?.hidden === true)
   check('Unused dropped rows removed', !row('breast_size') && !row('bbt') && !row('cup'))
-  check('Ringing in the ears in Physical', row('custom_itchy')?.category === 'physical')
+  check('Her own symptom row sits in Physical', row('custom_itchy')?.category === 'physical')
   check('Medications grouped', row('custom_Medication A')?.category === 'meds' && row('custom_VitaminD')?.category === 'meds')
 }
 
