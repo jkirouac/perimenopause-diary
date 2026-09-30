@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { CREDIT } from '../lib/diary'
+import { InstallCard } from './Install'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
@@ -79,6 +80,7 @@ export function SignIn() {
         </form>
       )}
       {error && <p className="error" role="alert">{error}</p>}
+      <InstallCard />
       <p className="credit">{CREDIT}</p>
     </main>
   )

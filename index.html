@@ -3,8 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f6ecff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#241a30" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6ecff" />
+    <script>
+      // Light unless Dark (or Match my phone) was chosen in Settings; see src/lib/theme.ts.
+      // Runs before the page draws, so it never flashes the wrong colours.
+      ;(function () {
+        var pref = 'light'
+        try {
+          pref = localStorage.getItem('pd-theme') || 'light'
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.setAttribute('data-theme', 'dark')
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#241a30' : '#f6ecff')
+      })()
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Diary" />
     <link rel="icon" type="image/svg+xml" href="/perimenopause-diary/favicon.svg" />

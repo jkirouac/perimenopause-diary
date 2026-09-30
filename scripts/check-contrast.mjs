@@ -9,7 +9,7 @@ function tokens(block) {
   return Object.fromEntries([...block.matchAll(/--([a-z0-9-]+):\s*(#[0-9a-f]{6})\s*;/gi)].map((m) => [m[1], m[2]]))
 }
 const lightBlock = css.match(/:root\s*{([\s\S]*?)\n}/)[1]
-const darkBlock = css.match(/@media \(prefers-color-scheme: dark\)\s*{\s*:root\s*{([\s\S]*?)\n  }/)[1]
+const darkBlock = css.match(/:root\[data-theme='dark'\]\s*{([\s\S]*?)\n}/)[1]
 const themes = { light: tokens(lightBlock), dark: { ...tokens(lightBlock), ...tokens(darkBlock) } }
 
 function luminance(hex) {

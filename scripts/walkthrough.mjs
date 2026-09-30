@@ -222,10 +222,73 @@ try {
   const VitaminDRow = page.locator('.month-grid tr', { has: page.locator('th', { hasText: 'VitaminD' }) })
   check('…and its ticks stay in the month grid', (await VitaminDRow.locator('td', { hasText: '✓' }).count()) === 1)
 
-  // Dark mode.
+  // Light by default, even on a phone set to dark; Dark only when chosen.
+  const pageBg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
   await page.emulateMedia({ colorScheme: 'dark' })
+  await page.click('nav.tabs button:has-text("Tonight")')
+  await page.waitForTimeout(500)
+  check(`Light even when the phone is set to dark (${await pageBg()})`, (await pageBg()) === 'rgb(248, 247, 251)')
+  await page.click('nav.tabs button:has-text("Settings")')
+  await page.locator('.seg[aria-label="Appearance"]').getByRole('button', { name: 'Dark' }).click()
+  await page.reload()
+  await page.waitForSelector('.rows')
+  check('Choosing Dark in Settings sticks after a reload', (await pageBg()) === 'rgb(23, 18, 29)')
+  await page.click('nav.tabs button:has-text("Tonight")')
+  await page.waitForTimeout(800)
   await page.screenshot({ path: `${out}/11-dark.png` })
+  await page.click('nav.tabs button:has-text("Settings")')
+  await page.locator('.seg[aria-label="Appearance"]').getByRole('button', { name: 'Light' }).click()
+  check('Back to Light', (await pageBg()) === 'rgb(248, 247, 251)')
   await page.emulateMedia({ colorScheme: 'light' })
+
+  // Install banner: shown in a browser tab; "Not now" hides it for good on this phone.
+  await page.click('nav.tabs button:has-text("Tonight")')
+  const banner = page.locator('.install-banner')
+  check('The install banner shows in a browser tab', (await banner.count()) === 1)
+  await banner.getByRole('button', { name: 'Not now' }).click()
+  await page.reload()
+  await page.waitForSelector('.rows')
+  check('"Not now" hides the install banner after a reload', (await page.locator('.install-banner').count()) === 0)
+  await page.click('nav.tabs button:has-text("Settings")')
+  check('Settings still offers installing', (await page.locator('.install-card').count()) === 1)
+
+  // Inside the installed app there's nothing about installing.
+  const installed = await context.newPage()
+  await installed.addInitScript(() => {
+    const real = window.matchMedia.bind(window)
+    window.matchMedia = (q) =>
+      q.includes('display-mode: standalone') ? { ...real(q), matches: true, media: q, addEventListener() {} } : real(q)
+    localStorage.removeItem('pd-install-dismissed')
+  })
+  await installed.goto(APP)
+  await installed.waitForSelector('.rows')
+  check('No install banner inside the installed app', (await installed.locator('.install-banner').count()) === 0)
+  await installed.close()
+
+  // Large text on a narrow phone: no row name is split mid-word.
+  const narrow = await context.newPage()
+  await narrow.setViewportSize({ width: 360, height: 780 })
+  await narrow.goto(APP)
+  await narrow.addStyleTag({ content: 'html, body { font-size: 20px !important; }' })
+  await narrow.waitForSelector('.rows')
+  await narrow.waitForTimeout(500)
+  const split = await narrow.evaluate(() =>
+    [...document.querySelectorAll('.row-label')]
+      .filter((label) => {
+        const words = label.textContent.split(/[\s/]+/).filter(Boolean)
+        const probe = document.createElement('span')
+        probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:inherit'
+        label.appendChild(probe)
+        const widest = Math.max(...words.map((w) => ((probe.textContent = w), probe.getBoundingClientRect().width)))
+        probe.remove()
+        return label.getBoundingClientRect().width + 0.5 < widest
+      })
+      .map((l) => l.textContent),
+  )
+  check(`No row name is split mid-word with large text (${split.join(', ') || 'none'})`, split.length === 0)
+  await narrow.evaluate(() => document.querySelector('.rows').scrollIntoView())
+  await narrow.screenshot({ path: `${out}/11b-large-text-360.png` })
+  await narrow.close()
 
   // Doctor printout, as a landscape PDF-style page.
   const printPage = await context.newPage()

@@ -8,6 +8,12 @@ import '@fontsource/figtree/500.css'
 import '@fontsource/figtree/600.css'
 import './styles.css'
 import App from './App.tsx'
+import { listenForInstall } from './lib/install'
+import { followPhoneTheme } from './lib/theme'
+
+// Chrome's install prompt fires early, so listen before the app draws.
+listenForInstall()
+followPhoneTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -38,41 +38,39 @@
   color-scheme: light;
 }
 
-/* Harmoni has no dark mode; this one is ours, for logging at 3 a.m.:
-   deep plum, lifted lavenders, and no pure white. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #17121d;
-    --surface: #211a29;
-    --surface-warm: #2a2230;
-    --ink: #eee6f4;
-    --muted: #b3a5c0;
-    --line: #372d42;
-    --accent: #cfa6f5;
-    --accent-ink: #1b1222;
-    --accent-soft: #35264a;
-    --emphasis: #f2a0cb;
-    --gold: #e7b451;
-    --gold-soft: #3a2f1a;
-    --gold-ink: #ffd98a;
-    --danger: #f09aa6;
-    --header-from: #241a30;
-    --header-to: #2f2140;
+/* Light is the default everywhere. Dark is chosen in Settings (index.html sets data-theme):
+   deep plum, lifted lavenders, and no pure white. Harmoni has no dark mode; this one is ours. */
+:root[data-theme='dark'] {
+  --bg: #17121d;
+  --surface: #211a29;
+  --surface-warm: #2a2230;
+  --ink: #eee6f4;
+  --muted: #b3a5c0;
+  --line: #372d42;
+  --accent: #cfa6f5;
+  --accent-ink: #1b1222;
+  --accent-soft: #35264a;
+  --emphasis: #f2a0cb;
+  --gold: #e7b451;
+  --gold-soft: #3a2f1a;
+  --gold-ink: #ffd98a;
+  --danger: #f09aa6;
+  --header-from: #241a30;
+  --header-to: #2f2140;
 
-    --sev-0: #2a2233;
-    --sev-1: #3d2b54;
-    --sev-2: #56397a;
-    --sev-3: #7a4fae;
-    --sev-4: #cfa6f5;
-    --sev-ink-strong: #1b1222;
+  --sev-0: #2a2233;
+  --sev-1: #3d2b54;
+  --sev-2: #56397a;
+  --sev-3: #7a4fae;
+  --sev-4: #cfa6f5;
+  --sev-ink-strong: #1b1222;
 
-    --less-2: #7a5718;
-    --less-1: #4a3a1c;
-    --usual: #2a2233;
-    --more-1: #3d2b54;
-    --more-2: #6a449c;
-    color-scheme: dark;
-  }
+  --less-2: #7a5718;
+  --less-1: #4a3a1c;
+  --usual: #2a2233;
+  --more-1: #3d2b54;
+  --more-2: #6a449c;
+  color-scheme: dark;
 }
 
 * {
@@ -416,23 +414,39 @@ a {
   align-items: center;
 }
 
+/* Words are never split; names with a slash wrap after it (wrapAtSlash). */
 .row-label {
   font-weight: 500;
-  min-width: 0;
-  /* Last resort for a long word; names with a slash wrap after it (wrapAtSlash). */
-  overflow-wrap: break-word;
 }
 
 /* 0–4 rows: label beside the buttons to keep the evening list short. */
 .row-sev {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(min-content, 1fr) auto;
   align-items: center;
   gap: 10px;
 }
 
+/* The buttons give way (down to 36px) before a name has to break. */
 .row-sev .choices {
-  grid-template-columns: repeat(5, 44px);
+  grid-template-columns: repeat(5, minmax(36px, 44px));
   gap: 5px;
+}
+
+/* With large text on a narrow phone, the name goes on its own line above the
+   buttons. Measured in em, so it follows the phone's text size. */
+.rows {
+  container-type: inline-size;
+}
+
+@container (max-width: 21em) {
+  .row-sev {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .row-sev .choices {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .row-sev .choice {
@@ -570,6 +584,42 @@ p.row-sub {
 .month-grid td.bp-cell {
   font-size: 0.7rem;
   white-space: nowrap;
+}
+
+/* Install: a slim banner at the top of Tonight, and a card on sign-in and Settings.
+   Only shown in a browser tab, never inside the installed app. */
+.install-banner {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 3px rgb(49 26 65 / 0.06);
+}
+
+.install-banner-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+
+.install-banner p,
+.install-card p {
+  margin: 0;
+}
+
+.install-banner-row p {
+  display: grid;
+  gap: 2px;
+}
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 /* ---------- month grid ---------- */

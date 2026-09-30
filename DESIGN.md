@@ -14,15 +14,16 @@ All colours live as tokens at the top of `src/styles.css`. After changing any to
 | Gentle voice. Never shame a gap or a skipped day. | All copy (see Voice) | Built |
 | Symptoms use the 0–4 scale. It's quick, and it matches the Menopause Rating Scale doctors use. | Every strength row | Built |
 | Blank means "not recorded"; 0 means "none". They never look the same. | Tonight, Month grid, doctor copy | Built |
-| Dark mode that's calm at 3 a.m.: deep plum, not black-and-white glare. | Follows the phone setting | Built |
+| Light is the default on every phone (their preference, 2026-09-30). A calm dark mode, deep plum rather than black-and-white glare, is there for 3 a.m. if she wants it. | Settings → Appearance: Light, Dark, Match my phone | Built |
 | A report she can edit before an appointment (from Balance). | For doctor tab | Future: prints as-is today |
+| Easy to put on the home screen. | Install banner on Tonight, card on sign-in and Settings. One tap on Android; two steps shown on iPhone | Built |
 | One-tap logging from the home screen (from Clue's widget). | Phone home screen | Future |
 
 ### Avoid
 
 | Rule | How we keep it |
 |---|---|
-| Nothing between her and the log. | Tonight opens straight onto the day. No articles, tips or cards above the rows except the flush counter. |
+| Nothing between her and the log. | Tonight opens straight onto the day. No articles, tips or cards above the rows except the flush counter. The one exception is the install banner: it appears only in a browser tab, "Not now" hides it for good, and it never appears inside the installed app. |
 | No interruptions after saving. | Saving is silent and automatic. No pop-ups, ratings prompts or upsells, ever. |
 | No long setup. | Sign-in is an email code; the standard rows are ready at once. |
 | No huge list up front. | Rows she doesn't track can be hidden; medications can be retired. |
@@ -71,7 +72,7 @@ This scale diverges: gold for less, violet for more, and a quiet neutral for usu
 
 ### Dark mode
 
-Harmoni has no dark mode; this one is our own. The background is deep plum `#17121d` and cards are `#211a29`. Text is soft lavender-white `#eee6f4`, never pure white. The accent lifts to `#cfa6f5` with dark text on it, and the emphasis colour is `#f2a0cb`. Every pairing passes the same checks as light mode.
+Light is the default everywhere, even on a phone set to dark. Dark applies only when chosen in Settings (or "Match my phone"); `index.html` sets `data-theme="dark"` before the page draws. Harmoni has no dark mode; this one is our own. The background is deep plum `#17121d` and cards are `#211a29`. Text is soft lavender-white `#eee6f4`, never pure white. The accent lifts to `#cfa6f5` with dark text on it, and the emphasis colour is `#f2a0cb`. Every pairing passes the same checks as light mode.
 
 ## Type
 
@@ -85,6 +86,8 @@ Harmoni has no dark mode; this one is our own. The background is deep plum `#171
 - **Flush card:** cream with a gold border and a purple "+1". It is the only thing above the rows.
 - **Sections:** the heading is serif, with a line icon in a pastel rounded square (`.tile`). The rows sit in one white card with hairline dividers and a very soft shadow.
 - **Choices:** rounded squares. The selected one gets its colour from the ramp and a dark outline, so the choice doesn't rely on colour alone.
+- **Row names never break mid-word.** Beside the 0–4 buttons, the buttons shrink (44 → 36 px) before a name has to wrap. With large text on a narrow phone (row under 21em), the name goes on its own line above full-width buttons. Names with a slash wrap after the slash.
+- **Install banner:** a slim white card above the day header, "Add the diary to your home screen", with **Install** and **Not now**.
 - **Medications:** name, then usual dose and notes in muted text. Once taken, a time field and a "Dose today, if different" field appear.
 - **Tab bar:** line icons. The current tab gets a lavender pill behind its icon, plus bold purple text.
 

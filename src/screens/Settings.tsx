@@ -25,6 +25,8 @@ import {
   type Extra,
 } from '../lib/store'
 import { supabase } from '../lib/supabase'
+import { setThemePref, themePref, type ThemePref } from '../lib/theme'
+import { InstallCard } from './Install'
 
 interface Props {
   rows: DiaryRow[]
@@ -72,6 +74,8 @@ export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameCha
 
       <NameField name={name} onSaved={onNameChanged} />
       <HeightField heightIn={heightIn} onSaved={onHeightChanged} />
+      <Appearance />
+      <InstallCard heading="Install on this phone" />
 
       <section className="section">
         <h2>What you track</h2>
@@ -202,6 +206,36 @@ function NameField({ name, onSaved }: { name: string; onSaved: (n: string) => vo
         }}
       />
       {status && <p className="muted small">{status}</p>}
+    </section>
+  )
+}
+
+// Light unless she chooses otherwise; saved on this phone only.
+function Appearance() {
+  const [pref, setPref] = useState<ThemePref>(themePref)
+  const options: { id: ThemePref; label: string }[] = [
+    { id: 'light', label: 'Light' },
+    { id: 'dark', label: 'Dark' },
+    { id: 'system', label: 'Match my phone' },
+  ]
+  return (
+    <section className="section">
+      <h2>Appearance</h2>
+      <p className="legend">Dark can be easier on the eyes at night.</p>
+      <div className="seg" role="group" aria-label="Appearance">
+        {options.map((o) => (
+          <button
+            key={o.id}
+            aria-pressed={pref === o.id}
+            onClick={() => {
+              setThemePref(o.id)
+              setPref(o.id)
+            }}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
     </section>
   )
 }

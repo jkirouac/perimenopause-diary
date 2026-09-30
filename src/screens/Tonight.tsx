@@ -14,6 +14,7 @@ import {
 import { addDays, isNightNow, longDate, useToday } from '../lib/dates'
 import type { Extra } from '../lib/store'
 import { useEntries } from '../lib/useEntries'
+import { InstallBanner } from './Install'
 
 type SetValue = (value: string | null, extra?: Extra | null) => void
 
@@ -50,6 +51,7 @@ export function Tonight({ rows, heightIn }: { rows: DiaryRow[]; heightIn: number
 
   return (
     <main className="screen">
+      <InstallBanner />
       <header className="day-head">
         <div className="seg" role="group" aria-label="Which day">
           <button aria-pressed={date === t} onClick={() => setDate(t)}>
