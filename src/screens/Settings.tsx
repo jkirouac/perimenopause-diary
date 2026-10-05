@@ -78,6 +78,7 @@ export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameCha
       <HeightField heightIn={heightIn} onSaved={onHeightChanged} />
       <Appearance />
       <InstallCard heading="Install on this phone" />
+      <ShareCard />
 
       <section className="section">
         <h2>What you track</h2>
@@ -131,7 +132,6 @@ export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameCha
         <DeleteAccount />
       </section>
 
-      <ShareCard />
       <Feedback />
 
       <section className="section">

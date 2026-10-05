@@ -15,6 +15,7 @@ import type { Extra } from '../lib/store'
 import { useEntries } from '../lib/useEntries'
 import { InstallBanner } from './Install'
 import { SectionIcon } from './SectionIcon'
+import { useShareIcon } from './Share'
 
 type SetValue = (value: string | null, extra?: Extra | null) => void
 
@@ -30,6 +31,7 @@ export function Tonight({ rows, heightIn }: { rows: DiaryRow[]; heightIn: number
   }
   const date = which === 'today' ? t : y
   const setDate = (d: string) => setWhich(d === t ? 'today' : 'yesterday')
+  const shareIcon = useShareIcon()
   const { entries, error, setValue, setComment } = useEntries(y, t)
 
   const visible = rows.filter((r) => !r.hidden)
@@ -53,14 +55,18 @@ export function Tonight({ rows, heightIn }: { rows: DiaryRow[]; heightIn: number
     <main className="screen">
       <InstallBanner />
       <header className="day-head">
-        <div className="seg" role="group" aria-label="Which day">
-          <button aria-pressed={date === t} onClick={() => setDate(t)}>
-            Today
-          </button>
-          <button aria-pressed={date === y} onClick={() => setDate(y)}>
-            Yesterday
-          </button>
+        <div className="day-top">
+          <div className="seg" role="group" aria-label="Which day">
+            <button aria-pressed={date === t} onClick={() => setDate(t)}>
+              Today
+            </button>
+            <button aria-pressed={date === y} onClick={() => setDate(y)}>
+              Yesterday
+            </button>
+          </div>
+          {shareIcon.button}
         </div>
+        {shareIcon.feedback}
         <h1>
           How was <em className="emph">{date === t ? 'today' : 'yesterday'}</em>?
         </h1>

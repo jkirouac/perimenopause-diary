@@ -307,6 +307,30 @@ a {
   background: linear-gradient(160deg, var(--header-from), var(--header-to));
 }
 
+.day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Quiet on the gradient: no box until it's pressed or focused. */
+.share-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: none;
+  color: var(--accent);
+}
+
+.share-icon:active,
+.share-icon:focus-visible {
+  background: var(--accent-soft);
+}
+
 .day-date {
   font-weight: 600;
 }
@@ -609,6 +633,13 @@ p.row-sub {
 .install-banner p,
 .install-card p {
   margin: 0;
+}
+
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 /* Shown only when copying fails, so it can be selected by hand. */

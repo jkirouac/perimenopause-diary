@@ -104,13 +104,13 @@ The phone's status-bar colour (`theme-color`) is set in `index.html` to copies o
 
 ## Components
 
-- **Day header:** a rounded panel with the soft lavender gradient. It holds the Today/Yesterday switch, the title ("How was *today*?"), the date and "N of M filled".
+- **Day header:** a rounded panel with the soft lavender gradient. It holds the Today/Yesterday switch with the share icon at its right, the title ("How was *today*?"), the date and "N of M filled".
 - **Flush card:** cream with a gold border and a purple "+1". Apart from the day header (and the install banner, in a browser tab), it is the only thing above the rows.
 - **Sections:** the heading is serif, with a line icon in a pastel rounded square (`.tile`). The rows sit in one white card with hairline dividers and a very soft shadow.
 - **Choices:** rounded squares. The selected one gets its colour from the ramp and a dark outline, so the choice doesn't rely on colour alone.
 - **Row names never break mid-word.** Beside the 0–4 buttons, the buttons shrink (44 → 36 px) before a name has to wrap. With large text on a narrow phone (row under 21em), the name goes on its own line above full-width buttons. Names with a slash wrap after the slash.
 - **Install banner:** a slim white card above the day header, "Add the diary to your home screen", with **Install** and **Not now**.
-- **Share card:** in Settings only, never on Tonight, and the app never prompts her to share. **Share the link** opens the phone's share sheet (or copies the link) with the landing page URL, without referral codes. It shares the app, never diary data.
+- **Sharing:** a quiet share icon at the top right of Tonight's day header, and a **Share Ebb & Flow** card in Settings. Both wait for her to tap: the app never prompts her to share. Either one opens the phone's share sheet (or copies the link) with the landing page URL, without referral codes. It shares the app, never diary data.
 - **Medications:** name, then usual dose and notes in muted text. Once taken, a time field and a "Dose today, if different" field appear.
 - **Tab bar:** line icons. The current tab gets a lavender pill behind its icon, plus bold purple text.
 
