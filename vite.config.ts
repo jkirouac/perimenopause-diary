@@ -51,6 +51,8 @@ export default defineConfig({
     contentSecurityPolicy(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered in main.tsx, which also checks for a new version each time the app is opened.
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Ebb & Flow',
