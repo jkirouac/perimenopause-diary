@@ -611,6 +611,14 @@ p.row-sub {
   margin: 0;
 }
 
+/* Shown only when copying fails, so it can be selected by hand. */
+.share-link {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
 .install-banner-row p {
   display: grid;
   gap: 2px;

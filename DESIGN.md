@@ -1,6 +1,6 @@
 # Design
 
-How the Daily Perimenopause Diary looks, sounds and behaves. The colours and design language follow **Harmoni** (by thePause): lavender to violet, gold accents, beige cards, a serif for headings, and a gentle voice. The rules below come from the September 2026 market scan's "Worth borrowing" and "Worth avoiding" lists. Scan: <https://claude.ai/artifact/2cKpX8VLTMXoVMpKfvN8bK>.
+How Ebb & Flow, our version of CeMCOR's Daily Perimenopause Diary, looks, sounds and behaves. The colours and design language follow **Harmoni** (by thePause): lavender to violet, gold accents, beige cards, a serif for headings, and a gentle voice. The rules below come from the September 2026 market scan's "Worth borrowing" and "Worth avoiding" lists. Scan: <https://claude.ai/artifact/2cKpX8VLTMXoVMpKfvN8bK>.
 
 All colours live as tokens at the top of `src/styles.css`. After changing any token, run `node scripts/check-contrast.mjs`: it fails if any pairing below drops under its minimum.
 
@@ -14,7 +14,7 @@ All colours live as tokens at the top of `src/styles.css`. After changing any to
 | Gentle voice. Never shame a gap or a skipped day. | All copy (see Voice) | Built |
 | Symptoms use the 0–4 scale. It's quick, and it matches the Menopause Rating Scale clinicians use. | Every strength row | Built |
 | Blank means "not recorded"; 0 means "none". They never look the same. | Tonight, Month grid, care team copy | Built |
-| Light is the default on every phone (their preference, 2026-09-30). A calm dark mode, deep plum rather than black-and-white glare, is there for 3 a.m. if she wants it. | Settings → Appearance: Light, Dark, Match my phone | Built |
+| Light is the default on every phone (decided 2026-09-30). A calm dark mode, deep plum rather than black-and-white glare, is there for 3 a.m. if she wants it. | Settings → Appearance: Light, Dark, Match my phone | Built |
 | A report she can edit before an appointment (from Balance). | Care team tab | Future: prints as-is today |
 | Easy to put on the home screen. | Install banner on Tonight, card on sign-in and Settings. One tap on Android; two steps shown on iPhone | Built |
 | One-tap logging from the home screen (from Clue's widget). | Phone home screen | Future |
@@ -46,11 +46,14 @@ The source Harmoni colours are lavender `#EED2FF`, violet `#9855D4`, deep purple
 | `--muted` | `#65566f` | Secondary text, legends | 6.3 on bg |
 | `--line` | `#e6deef` | Borders and dividers | |
 | `--accent` | `#734098` | Buttons, links, selected tab | 7.2 on surface |
+| `--accent-ink` | `#ffffff` | Text on accent buttons | 7.2 on accent |
 | `--accent-soft` | `#f1e6fa` | Selected backgrounds, icon tiles | accent on it 6.0 |
-| `--emphasis` | `#b3337c` | The one pink italic word in a title | 5.4 on bg |
-| `--gold` / `--gold-soft` / `--gold-ink` | `#ffc654` / `#fff3d1` / `#5e4100` | The flush card: gold border, cream fill | 8.5 |
+| `--emphasis` | `#b3337c` | The one pink italic word in a title | 4.2 on header-to, 5.4 on bg. Large headings only: it is under 4.5 on the header |
+| `--gold` / `--gold-soft` / `--gold-ink` | `#ffc654` / `#fff3d1` / `#5e4100` | The flush card: gold border, cream fill | gold-ink on gold-soft 8.5 |
 | `--danger` | `#a3303f` | Errors, delete | 6.9 on surface |
 | `--header-from` → `--header-to` | `#f6ecff` → `#ead6fb` | Soft gradient behind the day | ink 11.5 |
+
+`--radius` is `14px` for cards and panels.
 
 ### 0–4 strength
 
@@ -61,9 +64,11 @@ One hue, lavender to deep purple, getting steadily stronger:
 | Light | `#f1eef5` | `#eed2ff` | `#dbb4fb` | `#c093ec` | `#734098`, white text |
 | Dark | `#2a2233` | `#3d2b54` | `#56397a` | `#7a4fae` | `#cfa6f5`, dark text |
 
+Text on 4 is `--sev-ink-strong` (`#ffffff` light, `#1b1222` dark). Dark 3 is the tightest pairing in the app (ink 4.85), so don't brighten it.
+
 ### Compared with usual (M–Z)
 
-This scale diverges: gold for less, violet for more, and a quiet neutral for usual. Neither direction means "bad".
+M is much less, L a little less, U usual, Y a little more and Z much more. This scale diverges: gold for less, violet for more, and a quiet neutral for usual. Neither direction means "bad".
 
 | | M | L | U | Y | Z |
 |---|---|---|---|---|---|
@@ -72,7 +77,24 @@ This scale diverges: gold for less, violet for more, and a quiet neutral for usu
 
 ### Dark mode
 
-Light is the default everywhere, even on a phone set to dark. Dark applies only when chosen in Settings (or "Match my phone"); `index.html` sets `data-theme="dark"` before the page draws. Harmoni has no dark mode; this one is our own. The background is deep plum `#17121d` and cards are `#211a29`. Text is soft lavender-white `#eee6f4`, never pure white. The accent lifts to `#cfa6f5` with dark text on it, and the emphasis colour is `#f2a0cb`. Every pairing passes the same checks as light mode.
+Light is the default everywhere, even on a phone set to dark. Dark applies only when chosen in Settings (or "Match my phone"); `index.html` sets `data-theme="dark"` before the page draws. Harmoni has no dark mode; this one is our own: deep plum rather than black, and text in soft lavender-white, never pure white. Every pairing passes the same checks as light mode.
+
+| Token | Value | Contrast |
+|---|---|---|
+| `--bg` | `#17121d` | |
+| `--surface` | `#211a29` | |
+| `--surface-warm` | `#2a2230` | |
+| `--ink` | `#eee6f4` | 15.1 on bg |
+| `--muted` | `#b3a5c0` | 7.9 on bg |
+| `--line` | `#372d42` | |
+| `--accent` / `--accent-ink` | `#cfa6f5` / `#1b1222` | 8.4 on surface; ink on accent 9.0 |
+| `--accent-soft` | `#35264a` | accent on it 6.8 |
+| `--emphasis` | `#f2a0cb` | 7.6 on header-to |
+| `--gold` / `--gold-soft` / `--gold-ink` | `#e7b451` / `#3a2f1a` / `#ffd98a` | gold-ink on gold-soft 9.7 |
+| `--danger` | `#f09aa6` | 7.9 on surface |
+| `--header-from` → `--header-to` | `#241a30` → `#2f2140` | ink 12.2 |
+
+The phone's status-bar colour (`theme-color`) is set in `index.html` to copies of `--header-from`: `#f6ecff` light and `#241a30` dark. If you change the header gradient, change both places. The contrast script doesn't read `index.html`.
 
 ## Type
 
@@ -83,11 +105,12 @@ Light is the default everywhere, even on a phone set to dark. Dark applies only 
 ## Components
 
 - **Day header:** a rounded panel with the soft lavender gradient. It holds the Today/Yesterday switch, the title ("How was *today*?"), the date and "N of M filled".
-- **Flush card:** cream with a gold border and a purple "+1". It is the only thing above the rows.
+- **Flush card:** cream with a gold border and a purple "+1". Apart from the day header (and the install banner, in a browser tab), it is the only thing above the rows.
 - **Sections:** the heading is serif, with a line icon in a pastel rounded square (`.tile`). The rows sit in one white card with hairline dividers and a very soft shadow.
 - **Choices:** rounded squares. The selected one gets its colour from the ramp and a dark outline, so the choice doesn't rely on colour alone.
 - **Row names never break mid-word.** Beside the 0–4 buttons, the buttons shrink (44 → 36 px) before a name has to wrap. With large text on a narrow phone (row under 21em), the name goes on its own line above full-width buttons. Names with a slash wrap after the slash.
 - **Install banner:** a slim white card above the day header, "Add the diary to your home screen", with **Install** and **Not now**.
+- **Share card:** in Settings only, never on Tonight, and the app never prompts her to share. **Share the link** opens the phone's share sheet (or copies the link) with the landing page URL, without referral codes. It shares the app, never diary data.
 - **Medications:** name, then usual dose and notes in muted text. Once taken, a time field and a "Dose today, if different" field appear.
 - **Tab bar:** line icons. The current tab gets a lavender pill behind its icon, plus bold purple text.
 
@@ -95,7 +118,7 @@ Light is the default everywhere, even on a phone set to dark. Dark applies only 
 
 Gentle and plain, like Harmoni's "No shaming if you skip."
 
-- Say "Nothing recorded yet", not "missed" or "incomplete".
+- Say "Nothing recorded in this period yet", not "missed" or "incomplete".
 - Say "Saved as you go", not "Don't forget to save!".
 - Name what she records ("Breast soreness"), and don't judge it ("Bad day").
 - Errors say what happened and what to do: "Couldn't save that change. Check your connection and try again."
@@ -104,7 +127,7 @@ Gentle and plain, like Harmoni's "No shaming if you skip."
 
 ## Print
 
-The copy for her care team prints in greys and black only, never purple. The numbers and letters carry the meaning, and colour only adds emphasis. It is landscape, one page per month, with a legend and the CeMCOR credit.
+The copy for her care team prints in greys and black only, never purple. The numbers and letters carry the meaning, and colour only adds emphasis. It is landscape, one page per month, with a legend and the CeMCOR credit. The print colours are in the `@media print` block of `src/styles.css`: black text, and 0–4 from white through `#eeeeee`, `#d4d4d4` and `#aaaaaa` to `#555555` with white text. The contrast script doesn't check them.
 
 ## Landing page
 

@@ -28,6 +28,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { setThemePref, themePref, type ThemePref } from '../lib/theme'
 import { InstallCard } from './Install'
+import { ShareCard } from './Share'
 
 interface Props {
   rows: DiaryRow[]
@@ -130,6 +131,7 @@ export function Settings({ rows, name, heightIn, email, onRowsChanged, onNameCha
         <DeleteAccount />
       </section>
 
+      <ShareCard />
       <Feedback />
 
       <section className="section">
